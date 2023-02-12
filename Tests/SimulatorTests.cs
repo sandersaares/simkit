@@ -50,6 +50,7 @@ public sealed class SimulatorTests
             Assert.AreEqual((int)parameters.SimulationDuration.TotalSeconds, tickCounter.Ticks);
         });
 
+        // We expect this to run the simulation and also write any telemetry to disk.
         await simulator.ExecuteAsync(CancellationToken.None);
     }
 }

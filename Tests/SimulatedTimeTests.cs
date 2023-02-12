@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Prometheus;
 using Simkit;
 
 namespace Tests;
@@ -9,7 +10,7 @@ public sealed class SimulatedTimeTests
     [TestMethod]
     public async Task Tick_IncrementsTime()
     {
-        var time = new SimulatedTime(Parameters);
+        var time = CreateInstance();
 
         const int tickCount = 10;
 
@@ -26,7 +27,7 @@ public sealed class SimulatedTimeTests
     [TestMethod]
     public async Task Delay_GetsReleasedOnTime()
     {
-        var time = new SimulatedTime(Parameters);
+        var time = CreateInstance();
 
         const int delaysPerTick = 10_000;
         const int tickCount = 10;
@@ -61,7 +62,7 @@ public sealed class SimulatedTimeTests
     [TestMethod]
     public async Task Timer_GetsCalledOnTime()
     {
-        var time = new SimulatedTime(Parameters);
+        var time = CreateInstance();
 
         const int tickCount = 10;
         const int triggerEveryNthTick = 2;
@@ -89,7 +90,7 @@ public sealed class SimulatedTimeTests
     [TestMethod]
     public async Task Timer_IsStoppedByReturnFalse()
     {
-        var time = new SimulatedTime(Parameters);
+        var time = CreateInstance();
 
         const int tickCount = 10;
         const int triggerEveryNthTick = 2;
@@ -122,7 +123,7 @@ public sealed class SimulatedTimeTests
     [TestMethod]
     public async Task Timer_IsStoppedByCancel()
     {
-        var time = new SimulatedTime(Parameters);
+        var time = CreateInstance();
 
         const int tickCount = 10;
         const int triggerEveryNthTick = 2;
@@ -157,7 +158,7 @@ public sealed class SimulatedTimeTests
     [TestMethod]
     public async Task Timer_SkipsOverlappingInvocations()
     {
-        var time = new SimulatedTime(Parameters);
+        var time = CreateInstance();
 
         const int tickCount = 10;
 
@@ -183,4 +184,6 @@ public sealed class SimulatedTimeTests
     }
 
     private static SimulationParameters Parameters => new();
+
+    private static SimulatedTime CreateInstance() => new SimulatedTime(Parameters, Metrics.DefaultFactory);
 }

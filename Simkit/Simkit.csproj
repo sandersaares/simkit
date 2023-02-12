@@ -11,4 +11,8 @@
 		<AnalysisLevel>latest</AnalysisLevel>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="prometheus-net" Version="8.0.0-pre-230210074852-a7c1277" />
+	</ItemGroup>
+
 </Project>

@@ -1,4 +1,6 @@
-﻿namespace Simkit;
+﻿using Prometheus;
+
+namespace Simkit;
 
 /// <summary>
 /// Represents one simulation being executed by the simulator.
@@ -6,6 +8,7 @@
 public interface ISimulation
 {
     ITime Time { get; }
+    IMetricFactory MetricFactory { get; }
 
     /// <summary>
     /// Configures a callback to be called for each simulation tick.
