@@ -34,10 +34,22 @@ public sealed record SimulationParameters
     public TimeSpan Timeout { get; init; } = TimeSpan.FromMinutes(1);
 
     /// <summary>
+    /// How often the current values of metrics are recorded. These data points may be exported at the end of the simulation as CSV files.
+    /// </summary>
+    public TimeSpan MetricsSamplingInterval { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// Convenience method. The duration is driven by time-based parameters but this lets you quickly calculate the total tick count.
     /// </summary>
     /// <remarks>
     /// The +1 is because the first tick is the zero tick and has no effective duration.
     /// </remarks>
     public int TicksPerSimulation => (int)Math.Ceiling(SimulationDuration.TotalSeconds / TickDuration.TotalSeconds) + 1;
+
+    internal void Validate()
+    {
+        // We require that metrics sampling happens on tick boundaries, to keep the logic sane.
+        if (MetricsSamplingInterval.Ticks % TickDuration.Ticks != 0)
+            throw new ArgumentException($"{nameof(MetricsSamplingInterval)} must be divisible by {nameof(TickDuration)}.");
+    }
 }

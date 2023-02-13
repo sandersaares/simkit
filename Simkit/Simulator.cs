@@ -1,4 +1,5 @@
-﻿using Prometheus;
+﻿using System.Globalization;
+using Prometheus;
 
 namespace Simkit;
 
@@ -39,12 +40,19 @@ public sealed class Simulator
     /// </summary>
     public async Task ExecuteAsync(CancellationToken cancel)
     {
+        var simulationId = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}-{Guid.NewGuid()}";
+
+        var artifactsPath = Path.Combine("SimulationArtifacts", simulationId);
+        Directory.CreateDirectory(artifactsPath);
+
+        var metricsExportPath = Path.Combine(artifactsPath, "metrics.json.gz");
+        await using var metricsHistorySerializer = new MetricHistorySerializer(File.Create(metricsExportPath));
+
         for (var runIndex = 0; runIndex < Parameters.ExecutionCount; runIndex++)
         {
-            var runMetricsRegistry = Metrics.NewCustomRegistry();
-            var runMetricsFactory = Metrics.WithCustomRegistry(runMetricsRegistry);
+            var runIdentifier = new SimulationRunIdentifier(simulationId, runIndex);
 
-            var simulation = new Simulation(Parameters, runMetricsFactory);
+            var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer);
             await _onExecute(simulation, cancel);
         }
     }
@@ -52,7 +60,7 @@ public sealed class Simulator
     private sealed class Simulation : ISimulation
     {
         public ITime Time => _time;
-        public IMetricFactory MetricFactory { get; }
+        public IMetricFactory MetricFactory => _metricFactory;
 
         public async Task ExecuteAsync(CancellationToken cancel)
         {
@@ -64,6 +72,8 @@ public sealed class Simulator
 
                 await _onTick(cancel);
 
+                await _metricHistory.SampleMetricsIfAppropriateAsync(_time.UtcNow, cancel);
+
                 _time.MoveToNextTick();
             }
         }
@@ -73,20 +83,33 @@ public sealed class Simulator
             _onTick = onTick;
         }
 
-        // Technically one could have a simulation with no per-tick callback, that is fine.
+        // Technically one could have a valid simulation with no per-tick callback, that is fine.
         private Func<CancellationToken, Task> _onTick = _ => Task.CompletedTask;
 
         internal Simulation(
+            SimulationRunIdentifier identifier,
             SimulationParameters parameters,
-            IMetricFactory metricFactory)
+            MetricHistorySerializer metricHistorySerializer)
         {
+            _identifier = identifier;
             _parameters = parameters;
 
-            _time = new SimulatedTime(_parameters, metricFactory);
-            MetricFactory = metricFactory;
+            _metricsRegistry = Metrics.NewCustomRegistry();
+            _metricFactory = Metrics.WithCustomRegistry(_metricsRegistry);
+
+            _metricHistory = new MetricHistory(parameters, _identifier, _metricsRegistry, metricHistorySerializer);
+
+            _time = new SimulatedTime(_parameters, _metricFactory);
+
         }
 
+        private readonly SimulationRunIdentifier _identifier;
         private readonly SimulationParameters _parameters;
+
+        private readonly CollectorRegistry _metricsRegistry;
+        private readonly MetricFactory _metricFactory;
+
+        private readonly MetricHistory _metricHistory;
 
         private readonly SimulatedTime _time;
     }
