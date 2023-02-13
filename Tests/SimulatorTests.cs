@@ -34,7 +34,7 @@ public sealed class SimulatorTests
     }
 
     [TestMethod]
-    public async Task TickCounter_CountsTicksAtExpectedRate()
+    public async Task TickCounter_CountsTicksAtExpectedRateAndEmitsExpectedTelemetry()
     {
         var parameters = new SimulationParameters();
 
@@ -52,5 +52,10 @@ public sealed class SimulatorTests
 
         // We expect this to run the simulation and also write any telemetry to disk.
         await simulator.ExecuteAsync(CancellationToken.None);
+
+        var artifactsPath = SimulationArtifacts.GetArtifactsPath(simulator.SimulationId);
+        var metricsExportPath = Path.Combine(artifactsPath, SimulationArtifacts.MetricsExportFilename);
+
+        Assert.IsTrue(File.Exists(metricsExportPath));
     }
 }

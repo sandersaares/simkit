@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Prometheus;
+﻿using Prometheus;
 
 namespace Simkit;
 
@@ -10,9 +9,13 @@ public sealed class Simulator
 {
     public SimulationParameters Parameters { get; }
 
+    internal string SimulationId { get; }
+
     public Simulator(SimulationParameters parameters)
     {
         Parameters = parameters;
+
+        SimulationId = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}-{Guid.NewGuid()}";
     }
 
     /// <summary>
@@ -40,17 +43,15 @@ public sealed class Simulator
     /// </summary>
     public async Task ExecuteAsync(CancellationToken cancel)
     {
-        var simulationId = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}-{Guid.NewGuid()}";
-
-        var artifactsPath = Path.Combine("SimulationArtifacts", simulationId);
+        var artifactsPath = SimulationArtifacts.GetArtifactsPath(SimulationId);
         Directory.CreateDirectory(artifactsPath);
 
-        var metricsExportPath = Path.Combine(artifactsPath, "metrics.json.gz");
+        var metricsExportPath = Path.Combine(artifactsPath, SimulationArtifacts.MetricsExportFilename);
         await using var metricsHistorySerializer = new MetricHistorySerializer(File.Create(metricsExportPath));
 
         for (var runIndex = 0; runIndex < Parameters.ExecutionCount; runIndex++)
         {
-            var runIdentifier = new SimulationRunIdentifier(simulationId, runIndex);
+            var runIdentifier = new SimulationRunIdentifier(SimulationId, runIndex);
 
             var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer);
             await _onExecute(simulation, cancel);
@@ -100,7 +101,6 @@ public sealed class Simulator
             _metricHistory = new MetricHistory(parameters, _identifier, _metricsRegistry, metricHistorySerializer);
 
             _time = new SimulatedTime(_parameters, _metricFactory);
-
         }
 
         private readonly SimulationRunIdentifier _identifier;
