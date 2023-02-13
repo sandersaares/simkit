@@ -1,4 +1,5 @@
-﻿using Prometheus;
+﻿using Microsoft.Extensions.Logging;
+using Prometheus;
 
 namespace Simkit;
 
@@ -9,6 +10,7 @@ public interface ISimulation
 {
     ITime Time { get; }
     IMetricFactory MetricFactory { get; }
+    ILoggerFactory LoggerFactory { get; }
 
     /// <summary>
     /// Configures a callback to be called for each simulation tick.

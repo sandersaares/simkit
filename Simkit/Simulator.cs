@@ -1,4 +1,7 @@
-﻿using Prometheus;
+﻿using Karambolo.Extensions.Logging.File;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Prometheus;
 
 namespace Simkit;
 
@@ -49,7 +52,7 @@ public sealed class Simulator
         var metricsExportPath = Path.Combine(artifactsPath, SimulationArtifacts.MetricsExportFilename);
         await using var metricsHistorySerializer = new MetricHistorySerializer(File.Create(metricsExportPath));
 
-        for (var runIndex = 0; runIndex < Parameters.ExecutionCount; runIndex++)
+        for (var runIndex = 0; runIndex < Parameters.RunCount; runIndex++)
         {
             var runIdentifier = new SimulationRunIdentifier(SimulationId, runIndex);
 
@@ -58,10 +61,13 @@ public sealed class Simulator
         }
     }
 
+    private Action<ILoggerFactory> _configureLoggerFactory = _ => { };
+
     private sealed class Simulation : ISimulation
     {
         public ITime Time => _time;
         public IMetricFactory MetricFactory => _metricFactory;
+        public ILoggerFactory LoggerFactory { get; }
 
         public async Task ExecuteAsync(CancellationToken cancel)
         {
@@ -98,9 +104,34 @@ public sealed class Simulator
             _metricsRegistry = Metrics.NewCustomRegistry();
             _metricFactory = Metrics.WithCustomRegistry(_metricsRegistry);
 
+            LoggerFactory = CreateLoggerFactory();
+
             _metricHistory = new MetricHistory(parameters, _identifier, _metricsRegistry, metricHistorySerializer);
 
             _time = new SimulatedTime(_parameters, _metricFactory);
+        }
+
+        private ILoggerFactory CreateLoggerFactory()
+        {
+            var loggerFactory = new LoggerFactory();
+
+            var fileLoggerOptions = new FileLoggerOptions
+            {
+                Files = new[]
+                {
+                    new LogFileOptions
+                    {
+                        Path = SimulationArtifacts.GetLogFileName(_identifier)
+                    }
+                },
+                FileAccessMode = LogFileAccessMode.KeepOpen,
+                RootPath = Path.GetFullPath(SimulationArtifacts.GetArtifactsPath(_identifier.SimulationId))
+            };
+
+            var fileProvider = new FileLoggerProvider(Options.Create(fileLoggerOptions));
+            loggerFactory.AddProvider(fileProvider);
+
+            return loggerFactory;
         }
 
         private readonly SimulationRunIdentifier _identifier;

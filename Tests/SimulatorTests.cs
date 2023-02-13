@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Simkit;
 
 namespace Tests;
@@ -13,10 +14,14 @@ public sealed class SimulatorTests
     {
         public long Ticks { get; private set; }
 
-        public TickCounter(ITime time)
+        public TickCounter(ITime time, ILogger<TickCounter> logger)
         {
+            _logger = logger;
+
             time.StartTimer(TimeSpan.FromSeconds(1), OnTick, _cts.Token);
         }
+
+        private readonly ILogger _logger;
 
         private readonly CancellationTokenSource _cts = new();
 
@@ -29,6 +34,9 @@ public sealed class SimulatorTests
         private bool OnTick(CancellationToken cancel)
         {
             Ticks++;
+
+            _logger.LogInformation($"Have seen {Ticks} ticks.");
+
             return true;
         }
     }
@@ -42,7 +50,7 @@ public sealed class SimulatorTests
 
         simulator.OnExecute(async (simulation, cancel) =>
         {
-            var tickCounter = new TickCounter(simulation.Time);
+            var tickCounter = new TickCounter(simulation.Time, simulation.LoggerFactory.CreateLogger<TickCounter>());
 
             await simulation.ExecuteAsync(cancel);
 
@@ -57,5 +65,13 @@ public sealed class SimulatorTests
         var metricsExportPath = Path.Combine(artifactsPath, SimulationArtifacts.MetricsExportFilename);
 
         Assert.IsTrue(File.Exists(metricsExportPath));
+
+        for (var runIndex = 0; runIndex < parameters.RunCount; runIndex++)
+        {
+            var logFilename = SimulationArtifacts.GetLogFileName(new SimulationRunIdentifier(simulator.SimulationId, runIndex));
+            var logPath = Path.Combine(artifactsPath, logFilename);
+
+            Assert.IsTrue(File.Exists(logPath));
+        }
     }
 }

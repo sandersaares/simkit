@@ -26,7 +26,7 @@ public sealed record SimulationParameters
     /// <remarks>
     /// Data from all executions is summarized automatically. More executions may help prove stability of the code under test.
     /// </remarks>
-    public int ExecutionCount { get; init; } = 10;
+    public int RunCount { get; init; } = 10;
 
     /// <summary>
     /// Maximum amount of real time the simulation is allowed to take before we give up and consider it a failure.
