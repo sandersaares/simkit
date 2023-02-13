@@ -1,4 +1,6 @@
-﻿using Karambolo.Extensions.Logging.File;
+﻿using System.Globalization;
+using System.Text;
+using Karambolo.Extensions.Logging.File;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Prometheus;
@@ -56,7 +58,7 @@ public sealed class Simulator
         {
             var runIdentifier = new SimulationRunIdentifier(SimulationId, runIndex);
 
-            var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer);
+            await using var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer);
             await _onExecute(simulation, cancel);
         }
     }
@@ -104,11 +106,37 @@ public sealed class Simulator
             _metricsRegistry = Metrics.NewCustomRegistry();
             _metricFactory = Metrics.WithCustomRegistry(_metricsRegistry);
 
-            LoggerFactory = CreateLoggerFactory();
-
             _metricHistory = new MetricHistory(parameters, _identifier, _metricsRegistry, metricHistorySerializer);
 
             _time = new SimulatedTime(_parameters, _metricFactory);
+
+            LoggerFactory = CreateLoggerFactory();
+        }
+
+        private sealed class SimulationFileLoggerContext : FileLoggerContext
+        {
+            public SimulationFileLoggerContext(ITime time) : base(default)
+            {
+                _time = time;
+            }
+
+            private readonly ITime _time;
+
+            public override DateTimeOffset GetTimestamp()
+            {
+                return _time.UtcNow;
+            }
+        }
+
+        private sealed class SimulationFileLogEntryTextBuilder : FileLogEntryTextBuilder
+        {
+            internal static new readonly SimulationFileLogEntryTextBuilder Instance = new();
+
+            protected override void AppendTimestamp(StringBuilder sb, DateTimeOffset timestamp)
+            {
+                // By default, the base class emits local time. We override this here to avoid timezone conversion and use UTC (which we use for everything).
+                sb.Append(" @ ").AppendLine(timestamp.ToString("o", CultureInfo.InvariantCulture));
+            }
         }
 
         private ILoggerFactory CreateLoggerFactory()
@@ -125,10 +153,11 @@ public sealed class Simulator
                     }
                 },
                 FileAccessMode = LogFileAccessMode.KeepOpen,
-                RootPath = Path.GetFullPath(SimulationArtifacts.GetArtifactsPath(_identifier.SimulationId))
+                RootPath = Path.GetFullPath(SimulationArtifacts.GetArtifactsPath(_identifier.SimulationId)),
+                TextBuilder = SimulationFileLogEntryTextBuilder.Instance
             };
 
-            var fileProvider = new FileLoggerProvider(Options.Create(fileLoggerOptions));
+            var fileProvider = new FileLoggerProvider(new SimulationFileLoggerContext(_time), Options.Create(fileLoggerOptions));
             loggerFactory.AddProvider(fileProvider);
 
             return loggerFactory;
@@ -143,5 +172,11 @@ public sealed class Simulator
         private readonly MetricHistory _metricHistory;
 
         private readonly SimulatedTime _time;
+
+        public ValueTask DisposeAsync()
+        {
+            LoggerFactory.Dispose();
+            return default;
+        }
     }
 }

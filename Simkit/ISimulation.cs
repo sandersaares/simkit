@@ -6,7 +6,7 @@ namespace Simkit;
 /// <summary>
 /// Represents one simulation being executed by the simulator.
 /// </summary>
-public interface ISimulation
+public interface ISimulation : IAsyncDisposable
 {
     ITime Time { get; }
     IMetricFactory MetricFactory { get; }
