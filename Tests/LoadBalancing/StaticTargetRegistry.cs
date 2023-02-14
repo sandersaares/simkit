@@ -1,16 +1,15 @@
 ﻿namespace Tests.LoadBalancing;
 
 /// <summary>
-/// A target registry that always returns the same snapshot of the same set of targets.
+/// A target registry that just acts like a variable - always returning a specific set of targets it is told to return.
 /// </summary>
 internal sealed class StaticTargetRegistry : ITargetRegistry
 {
-    public StaticTargetRegistry(IReadOnlyList<ITargetSnapshot> targets)
+    public StaticTargetRegistry()
     {
-        _targets = targets;
     }
 
-    private readonly IReadOnlyList<ITargetSnapshot> _targets;
+    public IReadOnlyList<ITargetSnapshot> Targets { get; set; } = Array.Empty<ITargetSnapshot>();
 
     private sealed class Snapshot : ITargetRegistrySnapshot
     {
@@ -24,6 +23,6 @@ internal sealed class StaticTargetRegistry : ITargetRegistry
 
     public ITargetRegistrySnapshot GetSnapshot()
     {
-        return new Snapshot(_targets);
+        return new Snapshot(Targets);
     }
 }

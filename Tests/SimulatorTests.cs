@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Simkit;
 
@@ -45,21 +46,23 @@ public sealed class SimulatorTests
     public async Task TickCounter_CountsTicksAtExpectedRateAndEmitsExpectedTelemetry()
     {
         var parameters = new SimulationParameters();
-
         var simulator = new Simulator(parameters);
 
-        simulator.OnExecute(async (simulation, cancel) =>
+        simulator.ConfigureServices(services =>
         {
-            var tickCounter = new TickCounter(simulation.Time, simulation.LoggerFactory.CreateLogger<TickCounter>());
+            services.AddSingleton<TickCounter>();
+        });
+
+        // We expect this to run the simulation and also write any telemetry to disk.
+        await simulator.ExecuteAsync(async (simulation, cancel) =>
+        {
+            var tickCounter = simulation.GetRequiredService<TickCounter>();
 
             await simulation.ExecuteAsync(cancel);
 
             // It counts one per second, so that's how much we expect to see.
             Assert.AreEqual((int)parameters.SimulationDuration.TotalSeconds, tickCounter.Ticks);
-        });
-
-        // We expect this to run the simulation and also write any telemetry to disk.
-        await simulator.ExecuteAsync(CancellationToken.None);
+        }, CancellationToken.None);
 
         var artifactsPath = SimulationArtifacts.GetArtifactsPath(simulator.SimulationId);
         var metricsExportPath = Path.Combine(artifactsPath, SimulationArtifacts.MetricsExportFilename);

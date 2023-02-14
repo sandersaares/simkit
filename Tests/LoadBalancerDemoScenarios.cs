@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Simkit;
 using Tests.LoadBalancing;
@@ -18,27 +19,41 @@ public sealed class LoadBalancerDemoScenarios
         var parameters = new SimulationParameters();
         var simulator = new Simulator(parameters);
 
-        var scenarioConfiguration = new BasicRequestScenarioConfiguration(MaxRequestDuration: TimeSpan.FromSeconds(60), MaxConcurrentRequestsPerTarget: 1000, GlobalRequestsPerSecond: 100);
-
         const int targetCount = 10;
 
-        simulator.OnExecute(async (simulation, cancel) =>
+        simulator.ConfigureServices(services =>
         {
-            var loadGenerator = new BasicLoadGenerator(parameters, scenarioConfiguration, simulation.Time, simulation.MetricFactory, simulation.LoggerFactory.CreateLogger<BasicLoadGenerator>(), simulation.LoggerFactory);
+            services.AddSingleton(new BasicRequestScenarioConfiguration(MaxRequestDuration: TimeSpan.FromSeconds(60), MaxConcurrentRequestsPerTarget: 1000, GlobalRequestsPerSecond: 100));
+            services.AddSingleton<BasicLoadGenerator>();
+
+            services.AddSingleton<StaticTargetRegistry>();
+            services.AddSingleton<ITargetRegistry>(sp => sp.GetRequiredService<StaticTargetRegistry>());
+
+            services.AddTransient<BasicRequestTarget>();
+
+            services.AddSingleton<RandomLoadBalancer>();
+        });
+
+        await simulator.ExecuteAsync(async (simulation, cancel) =>
+        {
+            var loadGenerator = simulation.GetRequiredService<BasicLoadGenerator>();
 
             var targets = new List<BasicRequestTarget>();
             for (var i = 0; i < targetCount;i++)
-                targets.Add(new BasicRequestTarget(scenarioConfiguration, simulation.Time, simulation.LoggerFactory.CreateLogger<BasicRequestTarget>()));
+                targets.Add(simulation.GetRequiredService<BasicRequestTarget>());
 
-            var targetRegistry = new StaticTargetRegistry(targets.Select(x => x.GetSnapshot()).ToList());
+            var targetRegistry = simulation.GetRequiredService<StaticTargetRegistry>();
+            targetRegistry.Targets = targets.Select(x => x.GetSnapshot()).ToList();
 
-            var loadBalancer = new RandomLoadBalancer(targetRegistry);
+            var loadBalancer = simulation.GetRequiredService<RandomLoadBalancer>();
 
-            var logger = simulation.LoggerFactory.CreateLogger(nameof(BasicScenario));
+            var logger = simulation.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(BasicScenario));
 
             var allRequests = new List<BasicRequest>();
 
-            simulation.OnTick(cancel =>
+            var simulatedTime = simulation.GetRequiredService<SimulatedTime>();
+
+            simulatedTime.TickElapsed += delegate
             {
                 while (loadGenerator.TryGetPendingRequest(out var request))
                 {
@@ -58,9 +73,7 @@ public sealed class LoadBalancerDemoScenarios
 
                     target.Handle(request);
                 }
-
-                return Task.CompletedTask;
-            });
+            };
 
             await simulation.ExecuteAsync(cancel);
 
@@ -69,8 +82,6 @@ public sealed class LoadBalancerDemoScenarios
             var pendingCount = allRequests.Count(x => !x.IsCompleted);
 
             logger.LogInformation($"{successCount:N0} requests successfully handled; {failureCount:N0} requests failed; {pendingCount:N0} still pending at end of simulation.");
-        });
-
-        await simulator.ExecuteAsync(CancellationToken.None);
+        }, CancellationToken.None);
     }
 }

@@ -13,6 +13,8 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Karambolo.Extensions.Logging.File" Version="3.3.1" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
 	  <PackageReference Include="prometheus-net" Version="8.0.0-pre-230210074852-a7c1277" />
 	</ItemGroup>
 
