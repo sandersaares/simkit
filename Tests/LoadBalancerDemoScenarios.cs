@@ -39,7 +39,7 @@ public sealed class LoadBalancerDemoScenarios
             var loadGenerator = simulation.GetRequiredService<BasicLoadGenerator>();
 
             var targets = new List<BasicRequestTarget>();
-            for (var i = 0; i < targetCount;i++)
+            for (var i = 0; i < targetCount; i++)
                 targets.Add(simulation.GetRequiredService<BasicRequestTarget>());
 
             var targetRegistry = simulation.GetRequiredService<StaticTargetRegistry>();
@@ -55,23 +55,28 @@ public sealed class LoadBalancerDemoScenarios
 
             simulatedTime.TickElapsed += delegate
             {
-                while (loadGenerator.TryGetPendingRequest(out var request))
+                while (loadGenerator.TryGetPendingRequests(out var requestsBuffer, out var requestCount))
                 {
-                    // We add it for tracking here.
-                    allRequests.Add(request);
-
-                    var targetId = loadBalancer.RouteRequest(request);
-
-                    var target = targets.FirstOrDefault(x => x.Id == targetId);
-
-                    if (target == null)
+                    for (var i = 0; i < requestCount; i++)
                     {
-                        logger.LogError($"Request {request.Id} routed to non-existing target {targetId}.");
-                        request.MarkAsFailed($"Routed to non-existing target {targetId}.");
-                        continue;
-                    }
+                        var request = requestsBuffer[i];
 
-                    target.Handle(request);
+                        // We add it for tracking here.
+                        allRequests.Add(request);
+                    
+                        var targetId = loadBalancer.RouteRequest(request);
+
+                        var target = targets.FirstOrDefault(x => x.Id == targetId);
+
+                        if (target == null)
+                        {
+                            logger.LogError("Request {requestId} routed to non-existing target {targetId}.", request.Id, targetId);
+                            request.MarkAsFailed($"Routed to non-existing target {targetId}.");
+                            return;
+                        }
+
+                        target.Handle(request);
+                    }
                 }
             };
 

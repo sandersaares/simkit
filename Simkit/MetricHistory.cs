@@ -1,8 +1,6 @@
 ﻿using System.Globalization;
-using System.Reflection.Emit;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using Prometheus;
 
 namespace Simkit;
@@ -89,8 +87,6 @@ internal sealed class MetricHistory
 
             _serializer.WriteMetricPoint(name, now, value, _simulationRunIdentifier, labels);
         }
-
-        await _serializer.FlushAsync(cancel);
 
         while (_captureNextSampleOnOrAfter <= now)
             _captureNextSampleOnOrAfter += _parameters.MetricsSamplingInterval;

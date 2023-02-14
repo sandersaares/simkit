@@ -61,6 +61,8 @@ public sealed class Simulator
 
             await using var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer, _configureServices);
             await executeSimulationRun(simulation, combinedCts.Token);
+
+            await metricsHistorySerializer.FlushAsync(cancel);
         }
     }
 

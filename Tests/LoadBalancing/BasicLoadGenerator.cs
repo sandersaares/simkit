@@ -5,6 +5,9 @@ using Simkit;
 
 namespace Tests.LoadBalancing;
 
+/// <remarks>
+/// Not thread-safe.
+/// </remarks>
 internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
 {
     public BasicLoadGenerator(
@@ -34,27 +37,31 @@ internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
 
     private int _requestsCreated;
 
-    private readonly object _lock = new();
+    private readonly BasicRequest[] _pendingRequestBuffer = new BasicRequest[1024];
 
-    public bool TryGetPendingRequest([NotNullWhen(returnValue: true)] out BasicRequest? request)
+    public bool TryGetPendingRequests([NotNullWhen(returnValue: true)] out BasicRequest[]? requestsBuffer, out int requestCount)
     {
-        lock (_lock)
+        requestCount = 0;
+        requestsBuffer = _pendingRequestBuffer;
+
+        var elapsedTime = _time.UtcNow - _parameters.StartTime;
+        var expectedRequestCount = (int)(elapsedTime.TotalSeconds * _scenarioConfiguration.GlobalRequestsPerSecond);
+        var missingRequestCount = expectedRequestCount - _requestsCreated;
+
+        if (missingRequestCount <= 0)
+            return false;
+
+        requestCount = Math.Min(_pendingRequestBuffer.Length, missingRequestCount);
+        _requestsCreated += requestCount;
+        _metrics.RequestsCreated.Inc(requestCount);
+
+        for (var i = 0; i < requestCount; i++)
         {
-            var elapsedTime = _time.UtcNow - _parameters.StartTime;
-            var expectedRequestCount = elapsedTime.TotalSeconds * _scenarioConfiguration.GlobalRequestsPerSecond;
-
-            if (expectedRequestCount <= _requestsCreated)
-            {
-                request = default;
-                return false;
-            }
-
             var requestDuration = TimeSpan.FromSeconds(_scenarioConfiguration.MaxRequestDuration.TotalSeconds * Random.Shared.NextDouble());
 
-            _requestsCreated++;
-            _metrics.RequestsCreated.Inc();
-            request = new BasicRequest(requestDuration, _time, _loggerFactory.CreateLogger<BasicRequest>());
-            return true;
+            requestsBuffer[i] = new BasicRequest(requestDuration, _time, _loggerFactory.CreateLogger<BasicRequest>());
         }
+
+        return requestCount != 0;
     }
 }

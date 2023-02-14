@@ -18,7 +18,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
         _logger = logger;
 
         var expectedCompletion = time.UtcNow + targetDuration;
-        _logger.LogDebug($"Request {Id} is expected to complete {expectedCompletion:u} if successfully handled.");
+        _logger.LogDebug("Request {Id} is expected to complete {ExpectedCompletion} if successfully handled.", Id, expectedCompletion.ToString("u"));
 
         // We assume (for now) that the request will be routed & processed on the same tick as it is created. To keep it simple.
         time.Delay(targetDuration, OnCompleted, CancellationToken.None);
@@ -62,7 +62,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             FailureReason = reason;
 
-            _logger.LogDebug($"Request {Id} failed: {reason}");
+            _logger.LogDebug("Request {Id} failed: {reason}", Id, reason);
 
             _notifyOnCompleted();
         }
@@ -78,7 +78,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             Succeeded = true;
 
-            _logger.LogDebug($"Request {Id} successfully completed.");
+            _logger.LogDebug("Request {Id} successfully completed.", Id);
 
             _notifyOnCompleted();
         }
