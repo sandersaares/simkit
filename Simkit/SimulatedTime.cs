@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using Prometheus;
+﻿using Prometheus;
 
 namespace Simkit;
 
