@@ -38,7 +38,7 @@ internal sealed class MetricHistorySerializer : IAsyncDisposable
         await _stream.DisposeAsync();
     }
 
-    public async Task WriteMetricPointAsync(string name, DateTimeOffset time, double value, SimulationRunIdentifier simulationRunIdentifier, IDictionary<string, string> labels, CancellationToken cancel)
+    public void WriteMetricPoint(string name, DateTimeOffset time, double value, SimulationRunIdentifier simulationRunIdentifier, IDictionary<string, string> labels)
     {
         _writer.WriteStartObject();
 
@@ -64,7 +64,10 @@ internal sealed class MetricHistorySerializer : IAsyncDisposable
         }
 
         _writer.WriteEndObject();
+    }
 
+    public async Task FlushAsync(CancellationToken cancel)
+    {
         await _writer.FlushAsync(cancel);
     }
 }
