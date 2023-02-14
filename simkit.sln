@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simkit", "Simkit\Simkit.csproj", "{1F6EC025-E6B0-4642-B396-0285D841051A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simkit", "Simkit\Simkit.csproj", "{1F6EC025-E6B0-4642-B396-0285D841051A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{30FE64D4-CFF4-43F0-9037-9F8E7E180E6B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{30FE64D4-CFF4-43F0-9037-9F8E7E180E6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DevApp", "DevApp\DevApp.csproj", "{6F8069B6-24FF-488C-8626-B6560D4DF2F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{30FE64D4-CFF4-43F0-9037-9F8E7E180E6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{30FE64D4-CFF4-43F0-9037-9F8E7E180E6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{30FE64D4-CFF4-43F0-9037-9F8E7E180E6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F8069B6-24FF-488C-8626-B6560D4DF2F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F8069B6-24FF-488C-8626-B6560D4DF2F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F8069B6-24FF-488C-8626-B6560D4DF2F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F8069B6-24FF-488C-8626-B6560D4DF2F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -10,6 +10,16 @@ public sealed class RealTime : ITime
     public long HighPrecisionTicksPerSecond => Stopwatch.Frequency;
 
     public Task Delay(TimeSpan duration, CancellationToken cancel) => Task.Delay(duration, cancel);
+    public void Delay(TimeSpan duration, Func<CancellationToken, Task> onElapsed, CancellationToken cancel) => _ = Task.Run(async delegate
+    {
+        await Task.Delay(duration, cancel);
+        await onElapsed(cancel);
+    });
+    public void Delay(TimeSpan duration, Action<CancellationToken> onElapsed, CancellationToken cancel) => _ = Task.Run(async delegate
+    {
+        await Task.Delay(duration, cancel);
+        onElapsed(cancel);
+    });
 
     public void StartTimer(TimeSpan interval, Func<CancellationToken, Task<bool>> onTick, CancellationToken cancel)
     {

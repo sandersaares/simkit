@@ -67,7 +67,7 @@ public sealed class Simulator
 
     private sealed class Simulation : ISimulation
     {
-        public ITime Time => _time;
+        public SimulatedTime Time => _time;
         public IMetricFactory MetricFactory => _metricFactory;
         public ILoggerFactory LoggerFactory { get; }
 

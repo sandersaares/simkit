@@ -8,7 +8,7 @@ namespace Simkit;
 /// </summary>
 public interface ISimulation : IAsyncDisposable
 {
-    ITime Time { get; }
+    SimulatedTime Time { get; }
     IMetricFactory MetricFactory { get; }
     ILoggerFactory LoggerFactory { get; }
 

@@ -35,10 +35,25 @@ public interface ITime
     /// <summary>
     /// Avoid using this as a scheduling mechanism because when running in a simulation,
     /// the simulation does not know when the code triggered by the delay finishes executing.
+    /// 
     /// That may cause the simulation to continue to the next tick too early (before all triggered code has finished).
-    /// Prefer using StartTimer instead, in which case the simulation will wait until the callback has completed.
+    /// Prefer using Delay(callback) or StartTimer() instead, in which case the simulation will wait until the callback has completed.
     /// </summary>
     Task Delay(TimeSpan duration, CancellationToken cancel);
+
+    /// <summary>
+    /// Calls a callback (once) when a delay elapses.
+    /// 
+    /// If running in a simulation, the simulation will pause until the callback returns.
+    /// </summary>
+    void Delay(TimeSpan duration, Func<CancellationToken, Task> onElapsed, CancellationToken cancel);
+
+    /// <summary>
+    /// Calls a callback (once) when a delay elapses.
+    /// 
+    /// If running in a simulation, the simulation will pause until the callback returns.
+    /// </summary>
+    void Delay(TimeSpan duration, Action<CancellationToken> onElapsed, CancellationToken cancel);
 
     long GetHighPrecisionTimestamp();
 

@@ -2,8 +2,14 @@
 
 namespace Simkit;
 
-internal sealed class SimulatedTime : ITime
+public sealed class SimulatedTime : ITime
 {
+    ///// <summary>
+    ///// An event raised when every single simulation tick has elapsed (and before the next tick starts).
+    ///// Raised after processing all callbacks for the same simulation tick.
+    ///// </summary>
+    //public event Action TickElapsed = delegate { };
+
     public DateTimeOffset UtcNow => _now;
 
     // In a simulation, precision will be low no matter what, so let's keep the numbers easy to debug.
@@ -38,7 +44,7 @@ internal sealed class SimulatedTime : ITime
         {
             // Whether due to being canceled or due to the interval elapsing,
             // we have now completed the delay and no longer need the cancel registration.
-            cancelRegistration.Dispose();
+            cancelRegistration.Dispose(); 
 
             return task;
         }, TaskContinuationOptions.ExecuteSynchronously).Unwrap();
@@ -48,6 +54,26 @@ internal sealed class SimulatedTime : ITime
 
     private readonly PriorityQueue<RegisteredDelay, DateTimeOffset> _delays = new();
     private readonly object _delaysLock = new();
+
+    public void Delay(TimeSpan duration, Func<CancellationToken, Task> onElapsed, CancellationToken cancel)
+    {
+        // A delay with a callback is just a timer that only runs once.
+        StartTimer(duration, async ct =>
+        {
+            await onElapsed(ct);
+            return false; // Only once.
+        }, cancel);
+    }
+
+    public void Delay(TimeSpan duration, Action<CancellationToken> onElapsed, CancellationToken cancel)
+    {
+        // A delay with a callback is just a timer that only runs once.
+        StartTimer(duration, ct =>
+        {
+            onElapsed(ct);
+            return Task.FromResult(false); // Only once.
+        }, cancel);
+    }
 
     public void StartTimer(TimeSpan interval, Func<CancellationToken, Task<bool>> onTick, CancellationToken cancel)
     {
@@ -187,6 +213,10 @@ internal sealed class SimulatedTime : ITime
         // If there was an unhandled exception in one of the timer tasks, we will re-throw here and the simulation will fail.
         // Pretty drastic but there is no very useful error handling strategy to apply here otherwise.
         await Task.WhenAll(timerCallbackTasks).WaitAsync(cancel);
+
+        // Call any registered per-tick callback.
+        // This is typically where simulated inputs/outputs perform their updates (the timers and delays are more meant for code under test).
+        //TickElapsed();
 
         _metrics.ElapsedTicks.Inc();
         _metrics.ElapsedTime.IncTo((_now - _parameters.StartTime).TotalSeconds);
