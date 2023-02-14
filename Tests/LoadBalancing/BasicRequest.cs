@@ -28,12 +28,15 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
     public bool IsCompleted { get; private set; }
     public bool Succeeded { get; private set; }
-    public string? FailureReason {get; private set; }
+    public string? FailureReason { get; private set; }
 
     /// <summary>
     /// Asynchronously calls the callback when the request has completed.
     /// If the request has already completed, still calls the callback (still asynchronously).
     /// </summary>
+    /// <remarks>
+    /// Do not reenter BasicRequest from within the callback - deadlock may occur.
+    /// </remarks>
     public void RegisterForCompletionNotification(Action callback)
     {
         lock (_lock)
@@ -41,7 +44,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             _notifyOnCompleted = callback;
 
             if (IsCompleted)
-                Task.Run(_notifyOnCompleted);
+                _notifyOnCompleted();
         }
     }
 
@@ -61,7 +64,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
             _logger.LogDebug($"Request {Id} failed: {reason}");
 
-            Task.Run(_notifyOnCompleted);
+            _notifyOnCompleted();
         }
     }
 
@@ -77,7 +80,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
             _logger.LogDebug($"Request {Id} successfully completed.");
 
-            Task.Run(_notifyOnCompleted);
+            _notifyOnCompleted();
         }
     }
 }

@@ -104,7 +104,7 @@ public sealed class SimulatedTime : ITime
 
         lock (_asynchronousTimersLock)
         {
-            _asynchronousTimers.Add(timer);
+            _asynchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
 
             _metrics.AsynchronousTimersCurrent.Set(_asynchronousTimers.Count);
             _metrics.AsynchronousTimersTotal.Inc();
@@ -120,7 +120,7 @@ public sealed class SimulatedTime : ITime
 
         lock (_synchronousTimersLock)
         {
-            _synchronousTimers.Add(timer);
+            _synchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
 
             _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
             _metrics.SynchronousTimersTotal.Inc();
@@ -145,9 +145,12 @@ public sealed class SimulatedTime : ITime
         CancellationToken Cancel)
     {
         internal DateTimeOffset NextTriggerOnOrAfter { get; set; }
+
+        // If the last callback returned "false", this is set and the logic will remove the timer the next time it is evaluated.
+        internal bool Remove { get; set; }
     }
 
-    private readonly List<RegisteredAsynchronousTimer> _asynchronousTimers = new();
+    private readonly PriorityQueue<RegisteredAsynchronousTimer, DateTimeOffset> _asynchronousTimers = new();
     private readonly object _asynchronousTimersLock = new();
 
     // A timer that is expected to complete synchronously (the ValueTask will probably be in a completed state immediately).
@@ -158,9 +161,12 @@ public sealed class SimulatedTime : ITime
         CancellationToken Cancel)
     {
         internal DateTimeOffset NextTriggerOnOrAfter { get; set; }
+
+        // If the last callback returned "false", this is set and the logic will remove the timer the next time it is evaluated.
+        internal bool Remove { get; set; }
     }
 
-    private readonly List<RegisteredSynchronousTimer> _synchronousTimers = new();
+    private readonly PriorityQueue<RegisteredSynchronousTimer, DateTimeOffset> _synchronousTimers = new();
     private readonly object _synchronousTimersLock = new();
 
     internal SimulatedTime(
@@ -179,6 +185,10 @@ public sealed class SimulatedTime : ITime
 
     private DateTimeOffset _now;
 
+    // We reuse these buffers for performance. We do not use ArrayPool because it has size limits.
+    private readonly Task[] _asynchronousTimerCallbackTasks = new Task[1024];
+    private readonly RegisteredSynchronousTimer[] _synchronousTimersToTrigger = new RegisteredSynchronousTimer[1024];
+
     /// <summary>
     /// Performs any time processing for the current tick (e.g. releasing delays and triggering timers).
     /// </summary>
@@ -187,30 +197,24 @@ public sealed class SimulatedTime : ITime
     {
         TriggerDelays(cancel);
 
-        Task[] asynchronousTimerCallbackTasks;
-        // How many items in the above buffer are actually used.
-        int asynchronousTimerCallbackCount = 0;
+        while (TriggerAsynchronousTimersAndLoadCallbackTasks(out var loadedCallbackCount))
+        {
+            for (var i = 0; i < loadedCallbackCount; i++)
+                await _asynchronousTimerCallbackTasks[i].WaitAsync(cancel);
 
-        asynchronousTimerCallbackTasks = TriggerAsynchronousTimers(ref asynchronousTimerCallbackCount);
+            _metrics.TimerCallbacksTotal.Inc(loadedCallbackCount);
+        }
 
-        _metrics.TimerCallbacksTotal.Inc(asynchronousTimerCallbackCount);
+        while (DetermineSynchronousTimersToTrigger(out var timersToTriggerCount))
+            await TriggerSynchronousTimersAsync(timersToTriggerCount);
 
-        // Now process all the synchronous timers. Note that we still need to be careful about reentrancy - the timer callbacks could try register new timers!
-        RegisteredSynchronousTimer[] synchronousTimersToTrigger;
-        // How many items in the above buffer are actually used.
-        int synchronousTimersToTriggerCount = 0;
+        // Ensure we do not keep any references to dead objects.
+        for (var i = 0; i < _asynchronousTimerCallbackTasks.Length; i++)
+            _asynchronousTimerCallbackTasks[i] = Task.CompletedTask;
 
-        synchronousTimersToTrigger = DetermineSynchronousTimersToTrigger(ref synchronousTimersToTriggerCount);
-
-        // Process all the synchronous timer callbacks.
-        await TriggerSynchronousTimers(synchronousTimersToTrigger, synchronousTimersToTriggerCount);
-
-        // Gather all the results from the asynchronous timer callbacks.
-        // If there was an unhandled exception in one of the timer tasks, we will re-throw here and the simulation will fail.
-        // Pretty drastic but there is no very useful error handling strategy to apply here otherwise.
-        await Task.WhenAll(asynchronousTimerCallbackTasks.Take(asynchronousTimerCallbackCount)).WaitAsync(cancel);
-
-        ArrayPool<Task>.Shared.Return(asynchronousTimerCallbackTasks);
+        // Ensure we do not keep any references to dead objects.
+        for (var i = 0; i < _synchronousTimersToTrigger.Length; i++)
+            _synchronousTimersToTrigger[i] = default!;
 
         // Call any registered per-tick callback.
         // This is often where simulated inputs/outputs perform their updates (the timers and delays are more meant for code under test).
@@ -248,27 +252,43 @@ public sealed class SimulatedTime : ITime
         }
     }
 
-    private Task[] TriggerAsynchronousTimers(ref int asynchronousTimerCallbackCount)
+    /// <summary>
+    /// Triggers asynchronous timers, storing the pending tasks in _asynchronousTimerCallbackTasks.
+    /// We call this (and process the results) in a loop until it returns false.
+    /// </summary>
+    /// <returns>
+    /// True if we loaded any callback tasks that need to be processed process.
+    /// </returns>
+    private bool TriggerAsynchronousTimersAndLoadCallbackTasks(out int loadedCallbackTaskCount)
     {
-        Task[] asynchronousTimerCallbackTasks;
+        loadedCallbackTaskCount = 0;
+
         lock (_asynchronousTimersLock)
         {
-            // If some timers have been cancelled, just remove them from the working set without further logic.
-            _asynchronousTimers.RemoveAll(x => x.Cancel.IsCancellationRequested);
-
-            asynchronousTimerCallbackTasks = ArrayPool<Task>.Shared.Rent(_asynchronousTimers.Count);
-
-            _metrics.AsynchronousTimersCurrent.Set(_asynchronousTimers.Count);
-
-            foreach (var timer in _asynchronousTimers)
+            while (true)
             {
-                if (timer.NextTriggerOnOrAfter > _now)
-                    continue; // Not yet.
+                if (!_asynchronousTimers.TryPeek(out var timer, out var triggerOnOrAfter))
+                    break; // No timers registered.
 
-                // This timer needs to be triggered.
+                // This timer needs to be triggered (or removed, if cancelled).
+                if (timer.Cancel.IsCancellationRequested || timer.Remove)
+                {
+                    // This timer is dead, just remove it.
+                    _asynchronousTimers.Dequeue();
+                    _metrics.AsynchronousTimersCurrent.Set(_asynchronousTimers.Count);
+                    continue;
+                }
+
+                if (_now < triggerOnOrAfter)
+                    break; // The next timer is in the future.
+
                 // First, schedule the next execution. We will skip some executions if too much time has passed.
                 while (timer.NextTriggerOnOrAfter <= _now)
                     timer.NextTriggerOnOrAfter += timer.Interval;
+
+                // Remove the timer from the beginning and enqueue it again with a new timestamp when it is next scheduled.
+                // Logic above guarantees we will not trigger it twice, even if it is again the next one in the queue.
+                _asynchronousTimers.EnqueueDequeue(timer, timer.NextTriggerOnOrAfter);
 
                 // We must kick off the callback into a new task here to avoid deadlock because the timer callback could itself register a new timer.
                 var timerCallbackTask = Task.Run(() => timer.OnTick(timer.Cancel).ContinueWith(t =>
@@ -277,74 +297,78 @@ public sealed class SimulatedTime : ITime
                     if (t.Result == true)
                         return; // Keep ticking.
 
-                    // Should no longer keep ticking. Remove the timer.
-                    // This is deadlock safe because we run asynchronously.
-                    lock (_asynchronousTimersLock)
-                    {
-                        _asynchronousTimers.Remove(timer);
-
-                        _metrics.AsynchronousTimersCurrent.Set(_asynchronousTimers.Count);
-                    }
+                    // Next evaluation will remove it.
+                    timer.Remove = true;
                 }, TaskContinuationOptions.RunContinuationsAsynchronously | TaskContinuationOptions.OnlyOnRanToCompletion));
 
-                asynchronousTimerCallbackTasks[asynchronousTimerCallbackCount++] = timerCallbackTask;
+                _asynchronousTimerCallbackTasks[loadedCallbackTaskCount++] = timerCallbackTask;
+
+                if (loadedCallbackTaskCount == _asynchronousTimerCallbackTasks.Length)
+                    break; // Buffer is full, cannot load any more callbacks. Next iteration will get the rest.
             }
         }
 
-        return asynchronousTimerCallbackTasks;
+        return loadedCallbackTaskCount != 0;
     }
 
-    private RegisteredSynchronousTimer[] DetermineSynchronousTimersToTrigger(ref int synchronousTimersToTriggerCount)
+    private bool DetermineSynchronousTimersToTrigger(out int timersToTriggerCount)
     {
-        RegisteredSynchronousTimer[] synchronousTimersToTrigger;
+        timersToTriggerCount = 0;
+
         lock (_synchronousTimersLock)
         {
-            // If some timers have been cancelled, just remove them from the working set without further logic.
-            _synchronousTimers.RemoveAll(x => x.Cancel.IsCancellationRequested);
-
-            synchronousTimersToTrigger = ArrayPool<RegisteredSynchronousTimer>.Shared.Rent(_synchronousTimers.Count);
-
-            _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
-
-            foreach (var timer in _synchronousTimers)
+            while (true)
             {
+                if (!_synchronousTimers.TryPeek(out var timer, out var triggerOnOrAfter))
+                    break; // No timers registered.
+
+                // This timer needs to be triggered (or removed, if cancelled).
+                if (timer.Cancel.IsCancellationRequested || timer.Remove)
+                {
+                    // This timer is dead, just remove it.
+                    _synchronousTimers.Dequeue();
+                    _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
+                    continue;
+                }
+
                 if (timer.NextTriggerOnOrAfter > _now)
-                    continue; // Not yet.
+                    break; // The next timer is in the future.
 
                 // This timer needs to be triggered.
                 // First, schedule the next execution. We will skip some executions if too much time has passed.
                 while (timer.NextTriggerOnOrAfter <= _now)
                     timer.NextTriggerOnOrAfter += timer.Interval;
 
-                synchronousTimersToTrigger[synchronousTimersToTriggerCount++] = timer;
+                // Remove the timer from the beginning and enqueue it again with a new timestamp when it is next scheduled.
+                // Logic above guarantees we will not trigger it twice, even if it is again the next one in the queue.
+                _synchronousTimers.EnqueueDequeue(timer, timer.NextTriggerOnOrAfter);
+
+                _synchronousTimersToTrigger[timersToTriggerCount++] = timer;
+
+                if (timersToTriggerCount == _synchronousTimersToTrigger.Length)
+                    break; // Buffer is full, cannot reference any more timers. Next iteration will get the rest.
             }
         }
 
-        return synchronousTimersToTrigger;
+        return timersToTriggerCount != 0;
     }
 
-    private async Task TriggerSynchronousTimers(RegisteredSynchronousTimer[] synchronousTimersToTrigger, int synchronousTimersToTriggerCount)
+    private async ValueTask TriggerSynchronousTimersAsync(int timersToTriggerCount)
     {
-        for (var i = 0; i < synchronousTimersToTriggerCount; i++)
+        for (var i = 0; i < timersToTriggerCount; i++)
         {
-            var timer = synchronousTimersToTrigger[i];
+            var timer = _synchronousTimersToTrigger[i];
 
             bool keepTimer = await timer.OnTick(timer.Cancel);
 
             if (keepTimer)
                 continue;
 
-            // Should no longer keep ticking. Remove the timer.
-            // This is deadlock safe because we run asynchronously.
-            lock (_synchronousTimersLock)
-            {
-                _synchronousTimers.Remove(timer);
-
-                _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
-            }
+            // Next evaluation will remove it.
+            timer.Remove = true;
         }
 
-        _metrics.TimerCallbacksTotal.Inc(synchronousTimersToTriggerCount);
+        _metrics.TimerCallbacksTotal.Inc(timersToTriggerCount);
     }
 
     /// <summary>

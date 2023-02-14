@@ -76,7 +76,7 @@ public sealed class Simulator
             {
                 await _time.ProcessCurrentTickAsync(cancel);
 
-                await _metricHistory.SampleMetricsIfAppropriateAsync(_time.UtcNow, cancel);
+                //await _metricHistory.SampleMetricsIfAppropriateAsync(_time.UtcNow, cancel);
 
                 _time.MoveToNextTick();
             }

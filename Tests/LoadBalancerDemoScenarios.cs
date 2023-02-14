@@ -23,7 +23,7 @@ public sealed class LoadBalancerDemoScenarios
 
         simulator.ConfigureServices(services =>
         {
-            services.AddSingleton(new BasicRequestScenarioConfiguration(MaxRequestDuration: TimeSpan.FromSeconds(60), MaxConcurrentRequestsPerTarget: 1000, GlobalRequestsPerSecond: 100));
+            services.AddSingleton(new BasicRequestScenarioConfiguration(MaxRequestDuration: TimeSpan.FromSeconds(60), MaxConcurrentRequestsPerTarget: 1000, GlobalRequestsPerSecond: 1000));
             services.AddSingleton<BasicLoadGenerator>();
 
             services.AddSingleton<StaticTargetRegistry>();
