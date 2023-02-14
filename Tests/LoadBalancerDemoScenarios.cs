@@ -70,7 +70,6 @@ public sealed class LoadBalancerDemoScenarios
 
                         if (target == null)
                         {
-                            logger.LogError("Request {requestId} routed to non-existing target {targetId}.", request.Id, targetId);
                             request.MarkAsFailed($"Routed to non-existing target {targetId}.");
                             return;
                         }
@@ -86,7 +85,7 @@ public sealed class LoadBalancerDemoScenarios
             var failureCount = allRequests.Count(x => x.IsCompleted && !x.Succeeded);
             var pendingCount = allRequests.Count(x => !x.IsCompleted);
 
-            logger.LogInformation($"{successCount:N0} requests successfully handled; {failureCount:N0} requests failed; {pendingCount:N0} still pending at end of simulation.");
+            LoadBalancingLog.ScenarioCompleted(logger, successCount, failureCount, pendingCount);
         }, CancellationToken.None);
     }
 }

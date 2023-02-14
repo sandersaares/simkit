@@ -18,7 +18,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
         _logger = logger;
 
         var expectedCompletion = time.UtcNow + targetDuration;
-        _logger.LogDebug("Request {Id} is expected to complete {ExpectedCompletion} if successfully handled.", Id, expectedCompletion.ToString("u"));
+        LoadBalancingLog.RequestCreated(_logger, Id, expectedCompletion);
 
         // We assume (for now) that the request will be routed & processed on the same tick as it is created. To keep it simple.
         time.Delay(targetDuration, OnCompleted, CancellationToken.None);
@@ -31,8 +31,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
     public string? FailureReason { get; private set; }
 
     /// <summary>
-    /// Asynchronously calls the callback when the request has completed.
-    /// If the request has already completed, still calls the callback (still asynchronously).
+    /// Requests a callback to be called when the request has completed.
     /// </summary>
     /// <remarks>
     /// Do not reenter BasicRequest from within the callback - deadlock may occur.
@@ -41,10 +40,11 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
     {
         lock (_lock)
         {
-            _notifyOnCompleted = callback;
-
+            // Sanity check, to avoid complex reentrancy logic.
             if (IsCompleted)
-                _notifyOnCompleted();
+                throw new InvalidOperationException("The request is already completed - you cannot register for completion notifications anymore.");
+
+            _notifyOnCompleted = callback;
         }
     }
 
@@ -62,7 +62,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             FailureReason = reason;
 
-            _logger.LogDebug("Request {Id} failed: {reason}", Id, reason);
+            LoadBalancingLog.RequestFailed(_logger, Id, reason);
 
             _notifyOnCompleted();
         }
@@ -78,7 +78,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             Succeeded = true;
 
-            _logger.LogDebug("Request {Id} successfully completed.", Id);
+            LoadBalancingLog.RequestSucceeded(_logger, Id);
 
             _notifyOnCompleted();
         }

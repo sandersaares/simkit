@@ -34,7 +34,7 @@ internal sealed class BasicRequestTarget
     {
         if (_activeRequests.Count >= _scenarioConfiguration.MaxConcurrentRequestsPerTarget)
         {
-            _logger.LogError("Rejecting request because we are already handling the maximum number of requests.");
+            LoadBalancingLog.TargetCapacityReached(_logger, Id, request.Id);
             request.MarkAsFailed("Max capacity reached.");
             return;
         }
