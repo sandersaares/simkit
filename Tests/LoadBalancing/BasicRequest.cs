@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Simkit;
+﻿using Simkit;
 
 namespace Tests.LoadBalancing;
 
@@ -12,19 +11,13 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
     public BasicRequest(
         TimeSpan targetDuration,
-        ITime time,
-        ILogger<BasicRequest> logger)
+        ITime time)
     {
-        _logger = logger;
-
         var expectedCompletion = time.UtcNow + targetDuration;
-        LoadBalancingLog.RequestCreated(_logger, Id, expectedCompletion);
 
         // We assume (for now) that the request will be routed & processed on the same tick as it is created. To keep it simple.
         time.Delay(targetDuration, OnCompleted, CancellationToken.None);
     }
-
-    private readonly ILogger _logger;
 
     public bool IsCompleted { get; private set; }
     public bool Succeeded { get; private set; }
@@ -62,8 +55,6 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             FailureReason = reason;
 
-            LoadBalancingLog.RequestFailed(_logger, Id, reason);
-
             _notifyOnCompleted();
         }
     }
@@ -77,8 +68,6 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
             IsCompleted = true;
             Succeeded = true;
-
-            LoadBalancingLog.RequestSucceeded(_logger, Id);
 
             _notifyOnCompleted();
         }

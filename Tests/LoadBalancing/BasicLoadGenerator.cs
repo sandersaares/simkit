@@ -59,7 +59,7 @@ internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
         {
             var requestDuration = TimeSpan.FromSeconds(_scenarioConfiguration.MaxRequestDuration.TotalSeconds * Random.Shared.NextDouble());
 
-            requestsBuffer[i] = new BasicRequest(requestDuration, _time, _loggerFactory.CreateLogger<BasicRequest>());
+            requestsBuffer[i] = new BasicRequest(requestDuration, _time);
         }
 
         return requestCount != 0;
