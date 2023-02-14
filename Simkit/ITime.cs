@@ -4,6 +4,9 @@
 /// Time is at the heart of any simulation. All time-related logic in code that can run under a simulation should be using the members of this interface.
 /// Any usage of standard library time functionality may cause deviations from the simulated timeline and/or slow down the simulation to real time.
 /// </summary>
+/// <remarks>
+/// Thread-safe.
+/// </remarks>
 public interface ITime
 {
     DateTimeOffset UtcNow { get; }
@@ -19,6 +22,18 @@ public interface ITime
     /// If running in a simulation, the simulation will pause until the tick handler returns.
     /// </summary>
     void StartTimer(TimeSpan interval, Func<CancellationToken, Task<bool>> onTick, CancellationToken cancel);
+
+    /// <summary>
+    /// Periodically calls an asynchronous callback from an unspecified thread.
+    /// 
+    /// Will not execute multiple times if multiple intervals of time pass.
+    /// 
+    /// There are two ways to stop the timer - either signal cancellation via the token (which is passed through to callback)
+    /// or return false from the callback. Both will result in no further timer executions being performed.
+    /// 
+    /// If running in a simulation, the simulation will pause until the tick handler returns.
+    /// </summary>
+    void StartTimer(TimeSpan interval, Func<CancellationToken, ValueTask<bool>> onTick, CancellationToken cancel);
 
     /// <summary>
     /// Periodically calls a synchronous callback from an unspecified thread.
@@ -47,6 +62,13 @@ public interface ITime
     /// If running in a simulation, the simulation will pause until the callback returns.
     /// </summary>
     void Delay(TimeSpan duration, Func<CancellationToken, Task> onElapsed, CancellationToken cancel);
+
+    /// <summary>
+    /// Calls a callback (once) when a delay elapses.
+    /// 
+    /// If running in a simulation, the simulation will pause until the callback returns.
+    /// </summary>
+    void Delay(TimeSpan duration, Func<CancellationToken, ValueTask> onElapsed, CancellationToken cancel);
 
     /// <summary>
     /// Calls a callback (once) when a delay elapses.
