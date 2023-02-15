@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Text.Json;
+using Nito.AsyncEx;
 
 namespace Simkit;
 
@@ -7,6 +8,8 @@ namespace Simkit;
 /// Serializes metric data points in compressed JSON lines format suitable for Azure Data Explorer bulk import.
 /// </summary>
 /// <remarks>
+/// Thread-safe.
+/// 
 /// Standard fields:
 /// * name (timeseries name)
 /// * timestamp (timestamp from simulated timeline)
@@ -38,8 +41,12 @@ internal sealed class MetricHistorySerializer : IAsyncDisposable
         await _stream.DisposeAsync();
     }
 
-    public void WriteMetricPoint(string name, DateTimeOffset time, double value, SimulationRunIdentifier simulationRunIdentifier, IDictionary<string, string> labels)
+    private readonly AsyncLock _lock = new();
+
+    public async Task WriteMetricPointAsync(string name, DateTimeOffset time, double value, SimulationRunIdentifier simulationRunIdentifier, IDictionary<string, string> labels, CancellationToken cancel)
     {
+        using var lockHolder = await _lock.LockAsync(cancel);
+
         _writer.WriteStartObject();
 
         _writer.WritePropertyName("name");
@@ -68,6 +75,8 @@ internal sealed class MetricHistorySerializer : IAsyncDisposable
 
     public async Task FlushAsync(CancellationToken cancel)
     {
+        using var lockHolder = await _lock.LockAsync(cancel);
+
         await _writer.FlushAsync(cancel);
     }
 }

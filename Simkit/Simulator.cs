@@ -26,7 +26,7 @@ public sealed class Simulator
 
     /// <summary>
     /// Sets the callback to use when the service collection for a simulation needs to be configured.
-    /// This is called for every simulation run that is executed by the simulator, before invoking the simulation.
+    /// This is called for every simulation run that is executed by the simulator, before invoking that run of the simulation.
     /// </summary>
     public void ConfigureServices(Action<IServiceCollection> configureServices)
     {
@@ -40,7 +40,7 @@ public sealed class Simulator
     /// Telemetry from each iteration is written to persistent storage for later manual analysis.
     /// </summary>
     /// <param name="executeSimulationRun">
-    /// Callback called for every simulation run that is to be executed.
+    /// Callback called for every simulation run that is to be executed, potentially concurrently.
     /// The callback is expected to do any necessary setup and then call ISimulation.ExecuteAsync().
     /// </param>
     /// <param name="cancel">Signal to cancel the simulation.</param>
@@ -55,14 +55,33 @@ public sealed class Simulator
         var metricsExportPath = Path.Combine(artifactsPath, SimulationArtifacts.MetricsExportFilename);
         await using var metricsHistorySerializer = new MetricHistorySerializer(File.Create(metricsExportPath));
 
+        using var parallelismLimiter = new SemaphoreSlim(Environment.ProcessorCount);
+
+        var tasks = new List<Task>();
+
         for (var runIndex = 0; runIndex < Parameters.RunCount; runIndex++)
         {
-            var runIdentifier = new SimulationRunIdentifier(SimulationId, runIndex);
+            var thisRunIndex = runIndex; // Copy for the closure.
+            tasks.Add(Task.Run(() => ExecuteOneRunAsync(thisRunIndex, executeSimulationRun, metricsHistorySerializer, parallelismLimiter, combinedCts.Token), combinedCts.Token));
+        }
 
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task ExecuteOneRunAsync(int runIndex, Func<ISimulation, CancellationToken, Task> executeSimulationRun, MetricHistorySerializer metricsHistorySerializer, SemaphoreSlim parallelismLimiter, CancellationToken cancel)
+    {
+        var runIdentifier = new SimulationRunIdentifier(SimulationId, runIndex);
+
+        await parallelismLimiter.WaitAsync(cancel);
+
+        try
+        {
             await using var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer, _configureServices);
-            await executeSimulationRun(simulation, combinedCts.Token);
-
-            await metricsHistorySerializer.FlushAsync(cancel);
+            await executeSimulationRun(simulation, cancel);
+        }
+        finally
+        {
+            parallelismLimiter.Release();
         }
     }
 
@@ -158,7 +177,7 @@ public sealed class Simulator
             protected override void AppendTimestamp(StringBuilder sb, DateTimeOffset timestamp)
             {
                 // By default, the base class emits local time. We override this here to avoid timezone conversion and use UTC (which we use for everything).
-                sb.Append(" @ ").AppendLine(timestamp.ToString("o", CultureInfo.InvariantCulture));
+                sb.Append(" @ ").AppendLine($"{timestamp:u}");
             }
         }
 

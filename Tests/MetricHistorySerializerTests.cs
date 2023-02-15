@@ -23,8 +23,8 @@ public sealed class MetricHistorySerializerTests
 
         var simulationRunIdentifier = new SimulationRunIdentifier("simulation-id", 123);
 
-        serializer.WriteMetricPoint("name1", time, 1, simulationRunIdentifier, labels);
-        serializer.WriteMetricPoint("name2", time, 2, simulationRunIdentifier, labels);
+        await serializer.WriteMetricPointAsync("name1", time, 1, simulationRunIdentifier, labels, default);
+        await serializer.WriteMetricPointAsync("name2", time, 2, simulationRunIdentifier, labels, default);
         await serializer.FlushAsync(default);
 
         await using var buffer2 = new MemoryStream(buffer.ToArray());
