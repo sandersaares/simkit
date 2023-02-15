@@ -43,9 +43,9 @@ internal sealed class MetricHistorySerializer : IAsyncDisposable
 
     private readonly AsyncLock _lock = new();
 
-    public async Task WriteMetricPointAsync(string name, DateTimeOffset time, double value, SimulationRunIdentifier simulationRunIdentifier, IDictionary<string, string> labels, CancellationToken cancel)
+    public void WriteMetricPoint(string name, DateTimeOffset time, double value, SimulationRunIdentifier simulationRunIdentifier, IDictionary<string, string> labels)
     {
-        using var lockHolder = await _lock.LockAsync(cancel);
+        using var lockHolder = _lock.Lock();
 
         _writer.WriteStartObject();
 
