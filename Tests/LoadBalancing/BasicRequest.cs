@@ -7,9 +7,6 @@ namespace Tests.LoadBalancing;
 /// </summary>
 internal sealed class BasicRequest : IRequest, IRoutedRequest
 {
-    private static long _nextId;
-    private static long GetNextId() => Interlocked.Increment(ref _nextId);
-
     public BasicRequest(
         TimeSpan targetDuration,
         ITime time,
