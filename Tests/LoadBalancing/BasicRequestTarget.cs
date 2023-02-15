@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using Simkit;
-
-namespace Tests.LoadBalancing;
+﻿namespace Tests.LoadBalancing;
 
 /// <summary>
 /// A load balancing target that can handle BasicRequests.
@@ -17,18 +14,14 @@ internal sealed class BasicRequestTarget
     public Guid Id { get; } = Guid.NewGuid();
 
     public BasicRequestTarget(
-        BasicRequestScenarioConfiguration scenarioConfiguration,
-        ITime time,
-        ILogger<BasicRequestTarget> logger)
+        BasicRequestScenarioConfiguration scenarioConfiguration)
     {
         _scenarioConfiguration = scenarioConfiguration;
-        _time = time;
-        _logger = logger;
+
+        _snapshot = new StaticTargetSnapshot(Id);
     }
 
     private readonly BasicRequestScenarioConfiguration _scenarioConfiguration;
-    private readonly ITime _time;
-    private readonly ILogger _logger;
 
     public void Handle(BasicRequest request)
     {
@@ -43,7 +36,7 @@ internal sealed class BasicRequestTarget
             // The request itself signals when it is completed (at which point we remove it from our active requests set).
             _activeRequests.Add(request);
 
-            request.RegisterForCompletionNotification(() => OnRequestCompleted(request));
+            request.RegisterForCompletionNotification(OnRequestCompleted);
         }
     }
 
@@ -59,8 +52,6 @@ internal sealed class BasicRequestTarget
         }
     }
 
-    public ITargetSnapshot GetSnapshot()
-    {
-        return new StaticTargetSnapshot(Id);
-    }
+    public ITargetSnapshot GetSnapshot() => _snapshot;
+    private readonly ITargetSnapshot _snapshot;
 }

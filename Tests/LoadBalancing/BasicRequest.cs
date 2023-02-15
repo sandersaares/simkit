@@ -42,7 +42,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
     /// <remarks>
     /// Do not reenter BasicRequest from within the callback - deadlock may occur.
     /// </remarks>
-    public void RegisterForCompletionNotification(Action callback)
+    public void RegisterForCompletionNotification(Action<BasicRequest> callback)
     {
         lock (_lock)
         {
@@ -56,7 +56,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
     private readonly object _lock = new();
 
-    private Action _notifyOnCompleted = () => { };
+    private Action<BasicRequest> _notifyOnCompleted = _ => { };
 
     public void MarkAsFailed(string reason)
     {
@@ -68,7 +68,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             FailureReason = reason;
 
-            _notifyOnCompleted();
+            _notifyOnCompleted(this);
 
             _resultsAggregator.OnRequestFailed();
         }
@@ -84,7 +84,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             Succeeded = true;
 
-            _notifyOnCompleted();
+            _notifyOnCompleted(this);
 
             _resultsAggregator.OnRequestCompletedByTarget();
         }
@@ -100,7 +100,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             IsCompleted = true;
             Succeeded = true;
 
-            _notifyOnCompleted();
+            _notifyOnCompleted(this);
 
             _resultsAggregator.OnRequestCompletedByClient();
         }

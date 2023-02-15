@@ -9,7 +9,7 @@ internal sealed class StaticTargetRegistry : ITargetRegistry
     {
     }
 
-    public IReadOnlyList<ITargetSnapshot> Targets { get; set; } = Array.Empty<ITargetSnapshot>();
+    public IReadOnlyList<ITargetSnapshot> Targets { get; private set; } = Array.Empty<ITargetSnapshot>();
 
     private sealed class Snapshot : ITargetRegistrySnapshot
     {
@@ -23,6 +23,17 @@ internal sealed class StaticTargetRegistry : ITargetRegistry
 
     public ITargetRegistrySnapshot GetSnapshot()
     {
-        return new Snapshot(Targets);
+        if (_snapshot == null)
+            throw new InvalidOperationException("Targets have not been set yet.");
+
+        return _snapshot;
+    }
+
+    private ITargetRegistrySnapshot? _snapshot;
+
+    public void SetTargets(IReadOnlyList<ITargetSnapshot> targets)
+    {
+        Targets = targets;
+        _snapshot = new Snapshot(Targets);
     }
 }

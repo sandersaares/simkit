@@ -49,7 +49,7 @@ public sealed class LoadBalancerDemoScenarios
             }
 
             var targetRegistry = simulation.GetRequiredService<StaticTargetRegistry>();
-            targetRegistry.Targets = targets.Values.Select(x => x.GetSnapshot()).ToList();
+            targetRegistry.SetTargets(targets.Values.Select(x => x.GetSnapshot()).ToList());
 
             var loadBalancer = simulation.GetRequiredService<RandomLoadBalancer>();
 
