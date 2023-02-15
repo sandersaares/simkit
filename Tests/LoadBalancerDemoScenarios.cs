@@ -41,12 +41,15 @@ public sealed class LoadBalancerDemoScenarios
         {
             var loadGenerator = simulation.GetRequiredService<BasicLoadGenerator>();
 
-            var targets = new List<BasicRequestTarget>();
+            var targets = new Dictionary<Guid, BasicRequestTarget>();
             for (var i = 0; i < targetCount; i++)
-                targets.Add(simulation.GetRequiredService<BasicRequestTarget>());
+            {
+                var target = simulation.GetRequiredService<BasicRequestTarget>();
+                targets.Add(target.Id, target);
+            }
 
             var targetRegistry = simulation.GetRequiredService<StaticTargetRegistry>();
-            targetRegistry.Targets = targets.Select(x => x.GetSnapshot()).ToList();
+            targetRegistry.Targets = targets.Values.Select(x => x.GetSnapshot()).ToList();
 
             var loadBalancer = simulation.GetRequiredService<RandomLoadBalancer>();
 
@@ -65,9 +68,7 @@ public sealed class LoadBalancerDemoScenarios
 
                         var targetId = loadBalancer.RouteRequest(request);
 
-                        var target = targets.FirstOrDefault(x => x.Id == targetId);
-
-                        if (target == null)
+                        if (!targets.TryGetValue(targetId, out var target))
                         {
                             request.MarkAsFailed($"Routed to non-existing target {targetId}.");
                             return;
