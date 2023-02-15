@@ -69,6 +69,8 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             FailureReason = reason;
 
             _notifyOnCompleted();
+
+            _resultsAggregator.OnRequestFailed();
         }
     }
 
