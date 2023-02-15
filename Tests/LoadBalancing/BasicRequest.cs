@@ -27,7 +27,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
 
         // We assume (for now) that the request will be routed & processed on the same tick as it is created. To keep it simple.
         // Once the target duration elapses, we mark it as completed via this timer (unless something has already marked it as failed earlier).
-        time.Delay(targetDuration, _ => MarkAsCompletedByTarget(), cancel);
+        time.Delay(targetDuration, MarkAsCompletedByTarget, cancel);
     }
 
     private readonly IResultsAggregator _resultsAggregator;

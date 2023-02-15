@@ -32,7 +32,7 @@ public sealed class SimulatorTests
             _cts.Dispose();
         }
 
-        private bool OnTick(CancellationToken cancel)
+        private bool OnTick()
         {
             Ticks++;
 

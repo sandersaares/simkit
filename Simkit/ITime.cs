@@ -45,7 +45,7 @@ public interface ITime
     /// 
     /// If running in a simulation, the simulation will pause until the tick handler returns.
     /// </summary>
-    void StartTimer(TimeSpan interval, Func<CancellationToken, bool> onTick, CancellationToken cancel);
+    void StartTimer(TimeSpan interval, Func<bool> onTick, CancellationToken cancel);
 
     /// <summary>
     /// Avoid using this as a scheduling mechanism because when running in a simulation,
@@ -75,7 +75,7 @@ public interface ITime
     /// 
     /// If running in a simulation, the simulation will pause until the callback returns.
     /// </summary>
-    void Delay(TimeSpan duration, Action<CancellationToken> onElapsed, CancellationToken cancel);
+    void Delay(TimeSpan duration, Action onElapsed, CancellationToken cancel);
 
     long GetHighPrecisionTimestamp();
 

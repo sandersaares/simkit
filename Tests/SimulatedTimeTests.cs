@@ -70,7 +70,7 @@ public sealed class SimulatedTimeTests
 
         int timerTicksOccurred = 0;
 
-        time.StartTimer(timerInterval, ct =>
+        time.StartTimer(timerInterval, () =>
         {
             Interlocked.Increment(ref timerTicksOccurred);
             return true;
@@ -99,7 +99,7 @@ public sealed class SimulatedTimeTests
 
         int timerTicksOccurred = 0;
 
-        time.StartTimer(timerInterval, ct =>
+        time.StartTimer(timerInterval, () =>
         {
             Interlocked.Increment(ref timerTicksOccurred);
 
@@ -134,7 +134,7 @@ public sealed class SimulatedTimeTests
 
         using var cts = new CancellationTokenSource();
 
-        time.StartTimer(timerInterval, ct =>
+        time.StartTimer(timerInterval, () =>
         {
             Interlocked.Increment(ref timerTicksOccurred);
 
@@ -166,7 +166,7 @@ public sealed class SimulatedTimeTests
 
         int timerTicksOccurred = 0;
 
-        time.StartTimer(timerInterval, ct =>
+        time.StartTimer(timerInterval, () =>
         {
             Interlocked.Increment(ref timerTicksOccurred);
             return true;

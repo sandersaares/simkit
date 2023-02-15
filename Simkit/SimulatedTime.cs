@@ -84,11 +84,11 @@ public sealed class SimulatedTime : ITime
         StartTimer(duration, Wrapper, cancel);
     }
 
-    public void Delay(TimeSpan duration, Action<CancellationToken> onElapsed, CancellationToken cancel)
+    public void Delay(TimeSpan duration, Action onElapsed, CancellationToken cancel)
     {
         ValueTask Wrapper(CancellationToken ct)
         {
-            onElapsed(ct);
+            onElapsed();
             return default;
         }
 
@@ -125,15 +125,18 @@ public sealed class SimulatedTime : ITime
         }
     }
 
-    public void StartTimer(TimeSpan interval, Func<CancellationToken, bool> onTick, CancellationToken cancel)
+    public void StartTimer(TimeSpan interval, Func<bool> onTick, CancellationToken cancel)
     {
-        ValueTask<bool> Wrapper(CancellationToken cancel)
-        {
-            var result = onTick(cancel);
-            return new ValueTask<bool>(result);
-        }
+        var timer = RegisteredSynchronousTimer.GetInstance().Update(interval, onTick, cancel);
+        timer.NextTriggerOnOrAfter = _now + interval;
 
-        StartTimer(interval, Wrapper, cancel);
+        lock (_synchronousTimersLock)
+        {
+            _synchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
+
+            _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
+            _metrics.SynchronousTimersTotal.Inc();
+        }
     }
 
     // A timer that is expected to complete asynchronously (the Task will probably not be completed synchronously).
@@ -156,19 +159,39 @@ public sealed class SimulatedTime : ITime
     private sealed class RegisteredSynchronousTimer
     {
         public TimeSpan Interval { get; private set; }
-        public Func<CancellationToken, ValueTask<bool>> OnTick { get; private set; } = DefaultOnTick;
         public CancellationToken Cancel { get; private set; }
+
+        // One of these must be set, depending on which callback mode the user wishes to use.
+        public Func<CancellationToken, ValueTask<bool>>? OnValueTaskTick { get; set; }
+        public Func<bool>? OnRawTick { get; set; }
 
         public RegisteredSynchronousTimer Update(TimeSpan interval, Func<CancellationToken, ValueTask<bool>> onTick, CancellationToken cancel)
         {
+            Update(interval, cancel);
+
+            OnValueTaskTick = onTick;
+
+            return this;
+        }
+
+        public RegisteredSynchronousTimer Update(TimeSpan interval, Func<bool> onTick, CancellationToken cancel)
+        {
+            Update(interval, cancel);
+
+            OnRawTick = onTick;
+
+            return this;
+        }
+
+        private void Update(TimeSpan interval, CancellationToken cancel)
+        {
             Interval = interval;
-            OnTick = onTick;
+            OnValueTaskTick = null;
+            OnRawTick = null;
             Cancel = cancel;
 
             NextTriggerOnOrAfter = DateTimeOffset.MaxValue;
             Remove = false;
-
-            return this;
         }
 
         public DateTimeOffset NextTriggerOnOrAfter { get; set; }
@@ -187,11 +210,12 @@ public sealed class SimulatedTime : ITime
         public static RegisteredSynchronousTimer GetInstance() => Pool.Get();
         public void ReturnToPool()
         {
-            OnTick = DefaultOnTick;
+            // Do not leave dangling references to objects that may be GCed.
+            OnRawTick = null;
+            OnValueTaskTick = null;
+
             Pool.Return(this);
         }
-
-        private static ValueTask<bool> DefaultOnTick(CancellationToken _) => throw new InvalidOperationException("Somehow the default tick handler got called. This code should be unreachable.");
     }
 
     private readonly PriorityQueue<RegisteredSynchronousTimer, DateTimeOffset> _synchronousTimers = new();
@@ -387,7 +411,14 @@ public sealed class SimulatedTime : ITime
             {
                 var timer = _synchronousTimersToTrigger[i];
 
-                bool keepTimer = await timer.OnTick(timer.Cancel);
+                bool keepTimer;
+
+                if (timer.OnValueTaskTick != null)
+                    keepTimer = await timer.OnValueTaskTick(timer.Cancel);
+                else if (timer.OnRawTick != null)
+                    keepTimer = timer.OnRawTick();
+                else
+                    throw new InvalidOperationException("Registered timer had no callback associated with it.");
 
                 if (keepTimer)
                     continue;

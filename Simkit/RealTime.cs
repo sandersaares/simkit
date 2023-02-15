@@ -20,10 +20,10 @@ public sealed class RealTime : ITime
         await Task.Delay(duration, cancel);
         await onElapsed(cancel);
     });
-    public void Delay(TimeSpan duration, Action<CancellationToken> onElapsed, CancellationToken cancel) => _ = Task.Run(async delegate
+    public void Delay(TimeSpan duration, Action onElapsed, CancellationToken cancel) => _ = Task.Run(async delegate
     {
         await Task.Delay(duration, cancel);
-        onElapsed(cancel);
+        onElapsed();
     });
 
     public void StartTimer(TimeSpan interval, Func<CancellationToken, Task<bool>> onTick, CancellationToken cancel)
@@ -72,7 +72,7 @@ public sealed class RealTime : ITime
         });
     }
 
-    public void StartTimer(TimeSpan interval, Func<CancellationToken, bool> onTick, CancellationToken cancel)
+    public void StartTimer(TimeSpan interval, Func<bool> onTick, CancellationToken cancel)
     {
         _ = Task.Run(async delegate
         {
@@ -82,7 +82,7 @@ public sealed class RealTime : ITime
             {
                 try
                 {
-                    if (!onTick(cancel))
+                    if (!onTick())
                         break;
                 }
                 catch (OperationCanceledException) when (cancel.IsCancellationRequested)
