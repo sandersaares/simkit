@@ -13,25 +13,31 @@ internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
     public BasicLoadGenerator(
         SimulationParameters parameters,
         BasicRequestScenarioConfiguration scenarioConfiguration,
+        IResultsAggregator resultsAggregator,
         ITime time,
         IMetricFactory metricFactory,
         ILogger<BasicLoadGenerator> logger,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        CancellationToken cancel)
     {
         _parameters = parameters;
         _scenarioConfiguration = scenarioConfiguration;
+        _resultsAggregator = resultsAggregator;
         _time = time;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        _cancel = cancel;
 
         _metrics = new BasicLoadGeneratorMetrics(metricFactory);
     }
 
     private readonly SimulationParameters _parameters;
     private readonly BasicRequestScenarioConfiguration _scenarioConfiguration;
+    private readonly IResultsAggregator _resultsAggregator;
     private readonly ITime _time;
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly CancellationToken _cancel;
 
     private readonly BasicLoadGeneratorMetrics _metrics;
 
@@ -59,7 +65,7 @@ internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
         {
             var requestDuration = TimeSpan.FromSeconds(_scenarioConfiguration.MaxRequestDuration.TotalSeconds * Random.Shared.NextDouble());
 
-            requestsBuffer[i] = new BasicRequest(requestDuration, _time);
+            requestsBuffer[i] = new BasicRequest(requestDuration, _time, _resultsAggregator, _cancel);
         }
 
         return requestCount != 0;

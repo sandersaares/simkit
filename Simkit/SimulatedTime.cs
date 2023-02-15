@@ -1,4 +1,5 @@
-﻿using Prometheus;
+﻿using Microsoft.Extensions.ObjectPool;
+using Prometheus;
 
 namespace Simkit;
 
@@ -112,10 +113,8 @@ public sealed class SimulatedTime : ITime
 
     public void StartTimer(TimeSpan interval, Func<CancellationToken, ValueTask<bool>> onTick, CancellationToken cancel)
     {
-        var timer = new RegisteredSynchronousTimer(interval, onTick, cancel)
-        {
-            NextTriggerOnOrAfter = _now + interval
-        };
+        var timer = RegisteredSynchronousTimer.GetInstance().Update(interval, onTick, cancel);
+        timer.NextTriggerOnOrAfter = _now + interval;
 
         lock (_synchronousTimersLock)
         {
@@ -154,15 +153,39 @@ public sealed class SimulatedTime : ITime
 
     // A timer that is expected to complete synchronously (the ValueTask will probably be in a completed state immediately).
     // We still permit async execution but we use the expectation as an optimization opportunity.
-    private sealed record RegisteredSynchronousTimer(
-        TimeSpan Interval,
-        Func<CancellationToken, ValueTask<bool>> OnTick,
-        CancellationToken Cancel)
+    private sealed class RegisteredSynchronousTimer
     {
-        internal DateTimeOffset NextTriggerOnOrAfter { get; set; }
+        public TimeSpan Interval { get; private set; }
+        public Func<CancellationToken, ValueTask<bool>> OnTick { get; private set; } = DefaultOnTick;
+        public CancellationToken Cancel { get; private set; }
+
+        public RegisteredSynchronousTimer Update(TimeSpan interval, Func<CancellationToken, ValueTask<bool>> onTick, CancellationToken cancel)
+        {
+            Interval = interval;
+            OnTick = onTick;
+            Cancel = cancel;
+
+            NextTriggerOnOrAfter = DateTimeOffset.MaxValue;
+            Remove = false;
+
+            return this;
+        }
+
+        public DateTimeOffset NextTriggerOnOrAfter { get; set; }
 
         // If the last callback returned "false", this is set and the logic will remove the timer the next time it is evaluated.
-        internal bool Remove { get; set; }
+        public bool Remove { get; set; }
+
+        private static readonly ObjectPool<RegisteredSynchronousTimer> Pool = ObjectPool.Create<RegisteredSynchronousTimer>();
+
+        public static RegisteredSynchronousTimer GetInstance() => Pool.Get();
+        public void ReturnToPool()
+        {
+            OnTick = DefaultOnTick;
+            Pool.Return(this);
+        }
+
+        private static ValueTask<bool> DefaultOnTick(CancellationToken _) => throw new InvalidOperationException("Somehow the default tick handler got called. This code should be unreachable.");
     }
 
     private readonly PriorityQueue<RegisteredSynchronousTimer, DateTimeOffset> _synchronousTimers = new();
@@ -185,8 +208,8 @@ public sealed class SimulatedTime : ITime
     private DateTimeOffset _now;
 
     // We reuse these buffers for performance. We do not use ArrayPool because it has size limits.
-    private readonly Task[] _asynchronousTimerCallbackTasks = new Task[1024];
-    private readonly RegisteredSynchronousTimer[] _synchronousTimersToTrigger = new RegisteredSynchronousTimer[1024];
+    private readonly Task[] _asynchronousTimerCallbackTasks = new Task[128];
+    private readonly RegisteredSynchronousTimer[] _synchronousTimersToTrigger = new RegisteredSynchronousTimer[128];
 
     /// <summary>
     /// Performs any time processing for the current tick (e.g. releasing delays and triggering timers).
@@ -199,21 +222,18 @@ public sealed class SimulatedTime : ITime
         while (TriggerAsynchronousTimersAndLoadCallbackTasks(out var loadedCallbackCount))
         {
             for (var i = 0; i < loadedCallbackCount; i++)
+            {
                 await _asynchronousTimerCallbackTasks[i].WaitAsync(cancel);
+
+                // Do not leave dangling references to dead objects.
+                _asynchronousTimerCallbackTasks[i] = Task.CompletedTask;
+            }
 
             _metrics.TimerCallbacksTotal.Inc(loadedCallbackCount);
         }
 
         while (DetermineSynchronousTimersToTrigger(out var timersToTriggerCount))
             await TriggerSynchronousTimersAsync(timersToTriggerCount);
-
-        // Ensure we do not keep any references to dead objects.
-        for (var i = 0; i < _asynchronousTimerCallbackTasks.Length; i++)
-            _asynchronousTimerCallbackTasks[i] = Task.CompletedTask;
-
-        // Ensure we do not keep any references to dead objects.
-        for (var i = 0; i < _synchronousTimersToTrigger.Length; i++)
-            _synchronousTimersToTrigger[i] = default!;
 
         // Call any registered per-tick callback.
         // This is often where simulated inputs/outputs perform their updates (the timers and delays are more meant for code under test).
@@ -326,6 +346,7 @@ public sealed class SimulatedTime : ITime
                 {
                     // This timer is dead, just remove it.
                     _synchronousTimers.Dequeue();
+                    timer.ReturnToPool();
                     _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
                     continue;
                 }
@@ -356,15 +377,23 @@ public sealed class SimulatedTime : ITime
     {
         for (var i = 0; i < timersToTriggerCount; i++)
         {
-            var timer = _synchronousTimersToTrigger[i];
+            try
+            {
+                var timer = _synchronousTimersToTrigger[i];
 
-            bool keepTimer = await timer.OnTick(timer.Cancel);
+                bool keepTimer = await timer.OnTick(timer.Cancel);
 
-            if (keepTimer)
-                continue;
+                if (keepTimer)
+                    continue;
 
-            // Next evaluation will remove it.
-            timer.Remove = true;
+                // Next evaluation will remove it.
+                timer.Remove = true;
+            }
+            finally
+            {
+                // Do not leave dangling references to dead objects.
+                _synchronousTimersToTrigger[i] = null!;
+            }
         }
 
         _metrics.TimerCallbacksTotal.Inc(timersToTriggerCount);

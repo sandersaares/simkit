@@ -5,6 +5,7 @@
 /// </summary>
 /// <remarks>
 /// Built-in services offered by every simulation:
+/// * CancellationToken
 /// * SimulationParameters
 /// * ITime
 /// * SimulatedTime/// * IMetricFactory
@@ -18,5 +19,8 @@ public interface ISimulation : IAsyncDisposable
     /// <summary>
     /// Executes the simulation.
     /// </summary>
-    Task ExecuteAsync(CancellationToken cancel);
+    /// <remarks>
+    /// For cancellation use the cancellation token passed to the Simulator object.
+    /// </remarks>
+    Task ExecuteAsync();
 }

@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text;
+﻿using System.Text;
 using Karambolo.Extensions.Logging.File;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -76,7 +75,7 @@ public sealed class Simulator
 
         try
         {
-            await using var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer, _configureServices);
+            await using var simulation = new Simulation(runIdentifier, Parameters, metricsHistorySerializer, _configureServices, cancel);
             await executeSimulationRun(simulation, cancel);
         }
         finally
@@ -89,15 +88,15 @@ public sealed class Simulator
     {
         public IServiceProvider Services => _host.Services;
 
-        public async Task ExecuteAsync(CancellationToken cancel)
+        public async Task ExecuteAsync()
         {
             var tickCount = _parameters.TicksPerSimulation;
 
             for (var tickIndex = 0; tickIndex < tickCount; tickIndex++)
             {
-                await _time.ProcessCurrentTickAsync(cancel);
+                await _time.ProcessCurrentTickAsync(_cancel);
 
-                await _metricHistory.SampleMetricsIfAppropriateAsync(_time.UtcNow, cancel);
+                await _metricHistory.SampleMetricsIfAppropriateAsync(_time.UtcNow, _cancel);
 
                 _time.MoveToNextTick();
             }
@@ -107,10 +106,12 @@ public sealed class Simulator
             SimulationRunIdentifier identifier,
             SimulationParameters parameters,
             MetricHistorySerializer metricHistorySerializer,
-            Action<IServiceCollection> configureServices)
+            Action<IServiceCollection> configureServices,
+            CancellationToken cancel)
         {
             _identifier = identifier;
             _parameters = parameters;
+            _cancel = cancel;
 
             _metricsRegistry = Metrics.NewCustomRegistry();
             _metricFactory = Metrics.WithCustomRegistry(_metricsRegistry);
@@ -124,6 +125,7 @@ public sealed class Simulator
 
         private readonly SimulationRunIdentifier _identifier;
         private readonly SimulationParameters _parameters;
+        private readonly CancellationToken _cancel;
 
         private readonly CollectorRegistry _metricsRegistry;
         // Registered as a service (via IMetricFactory).
@@ -152,6 +154,7 @@ public sealed class Simulator
             services.AddSingleton<IMetricFactory>(_metricFactory);
             services.AddSingleton<ITime>(_time);
             services.AddSingleton<SimulatedTime>(_time);
+            services.AddTransient(typeof(CancellationToken), _ => _cancel);
         }
 
         #region Logging

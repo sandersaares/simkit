@@ -7,17 +7,30 @@ namespace Tests.LoadBalancing;
 /// </summary>
 internal sealed class BasicRequest : IRequest, IRoutedRequest
 {
-    public Guid Id { get; } = Guid.NewGuid();
+    public string Id { get; }
+
+    private static long _nextId;
+    private static long GetNextId() => Interlocked.Increment(ref _nextId);
 
     public BasicRequest(
         TimeSpan targetDuration,
-        ITime time)
+        ITime time,
+        IResultsAggregator resultsAggregator,
+        CancellationToken cancel)
     {
+        Id = GetNextId().ToString();
+        _resultsAggregator = resultsAggregator;
+
+        _resultsAggregator.OnRequestCreated();
+
         var expectedCompletion = time.UtcNow + targetDuration;
 
         // We assume (for now) that the request will be routed & processed on the same tick as it is created. To keep it simple.
-        time.Delay(targetDuration, OnCompleted, CancellationToken.None);
+        // Once the target duration elapses, we mark it as completed via this timer (unless something has already marked it as failed earlier).
+        time.Delay(targetDuration, _ => MarkAsCompletedByTarget(), cancel);
     }
+
+    private readonly IResultsAggregator _resultsAggregator;
 
     public bool IsCompleted { get; private set; }
     public bool Succeeded { get; private set; }
@@ -59,7 +72,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
         }
     }
 
-    private void OnCompleted(CancellationToken cancel)
+    public void MarkAsCompletedByTarget()
     {
         lock (_lock)
         {
@@ -70,6 +83,24 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
             Succeeded = true;
 
             _notifyOnCompleted();
+
+            _resultsAggregator.OnRequestCompletedByTarget();
+        }
+    }
+
+    public void MarkAsCompletedByClient()
+    {
+        lock (_lock)
+        {
+            if (IsCompleted)
+                return;
+
+            IsCompleted = true;
+            Succeeded = true;
+
+            _notifyOnCompleted();
+
+            _resultsAggregator.OnRequestCompletedByClient();
         }
     }
 }

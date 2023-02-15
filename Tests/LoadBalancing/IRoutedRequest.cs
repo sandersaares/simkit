@@ -32,4 +32,14 @@ internal interface IRoutedRequest
     /// May be called either by the target handling the request (if that is where the failure occurred) or by previous logic (if the request never even made it to the target).
     /// </summary>
     void MarkAsFailed(string reason);
+
+    /// <summary>
+    /// Marks the request as completed by initiative of the target (it finished the request and signaled no error to the caller).
+    /// </summary>
+    void MarkAsCompletedByTarget();
+
+    /// <summary>
+    /// Marks the request as canceled by initiative of the client (this can be a normal and successful thing if it no longer has a need for it).
+    /// </summary>
+    void MarkAsCompletedByClient();
 }

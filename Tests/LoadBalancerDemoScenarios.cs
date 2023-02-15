@@ -32,6 +32,9 @@ public sealed class LoadBalancerDemoScenarios
             services.AddTransient<BasicRequestTarget>();
 
             services.AddSingleton<RandomLoadBalancer>();
+
+            services.AddSingleton<BasicResultsAggregator>();
+            services.AddSingleton<IResultsAggregator>(sp => sp.GetRequiredService<BasicResultsAggregator>());
         });
 
         await simulator.ExecuteAsync(async (simulation, cancel) =>
@@ -49,9 +52,8 @@ public sealed class LoadBalancerDemoScenarios
 
             var logger = simulation.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(BasicScenario));
 
-            var allRequests = new List<BasicRequest>();
-
             var simulatedTime = simulation.GetRequiredService<SimulatedTime>();
+            var resultsAggregator = simulation.GetRequiredService<BasicResultsAggregator>();
 
             simulatedTime.TickElapsed += delegate
             {
@@ -61,9 +63,6 @@ public sealed class LoadBalancerDemoScenarios
                     {
                         var request = requestsBuffer[i];
 
-                        // We add it for tracking here.
-                        allRequests.Add(request);
-                    
                         var targetId = loadBalancer.RouteRequest(request);
 
                         var target = targets.FirstOrDefault(x => x.Id == targetId);
@@ -79,11 +78,11 @@ public sealed class LoadBalancerDemoScenarios
                 }
             };
 
-            await simulation.ExecuteAsync(cancel);
+            await simulation.ExecuteAsync();
 
-            var successCount = allRequests.Count(x => x.IsCompleted && x.Succeeded);
-            var failureCount = allRequests.Count(x => x.IsCompleted && !x.Succeeded);
-            var pendingCount = allRequests.Count(x => !x.IsCompleted);
+            var successCount = resultsAggregator.RequestsCompletedByClient + resultsAggregator.RequestsCompletedByTarget;
+            var failureCount = resultsAggregator.RequestsFailed;
+            var pendingCount = resultsAggregator.RequestsCreated - successCount - failureCount;
 
             LoadBalancingLog.ScenarioCompleted(logger, successCount, failureCount, pendingCount);
         }, CancellationToken.None);

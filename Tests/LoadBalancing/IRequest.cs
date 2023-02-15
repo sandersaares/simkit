@@ -6,7 +6,7 @@
 /// </summary>
 internal interface IRequest
 {
-    Guid Id { get; }
+    string Id { get; }
 
     // For now, we treat each request as an opaque object - we do not know what the caller wants, we need to make a blind decision.
 }

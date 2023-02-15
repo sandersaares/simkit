@@ -58,7 +58,7 @@ public sealed class SimulatorTests
         {
             var tickCounter = simulation.GetRequiredService<TickCounter>();
 
-            await simulation.ExecuteAsync(cancel);
+            await simulation.ExecuteAsync();
 
             // It counts one per second, so that's how much we expect to see.
             Assert.AreEqual((int)parameters.SimulationDuration.TotalSeconds, tickCounter.Ticks);
