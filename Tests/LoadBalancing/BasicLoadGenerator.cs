@@ -16,16 +16,12 @@ internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
         IResultsAggregator resultsAggregator,
         ITime time,
         IMetricFactory metricFactory,
-        ILogger<BasicLoadGenerator> logger,
-        ILoggerFactory loggerFactory,
         CancellationToken cancel)
     {
         _parameters = parameters;
         _scenarioConfiguration = scenarioConfiguration;
         _resultsAggregator = resultsAggregator;
         _time = time;
-        _logger = logger;
-        _loggerFactory = loggerFactory;
         _cancel = cancel;
 
         _metrics = new BasicLoadGeneratorMetrics(metricFactory);
@@ -35,15 +31,13 @@ internal sealed class BasicLoadGenerator : ILoadGenerator<BasicRequest>
     private readonly BasicRequestScenarioConfiguration _scenarioConfiguration;
     private readonly IResultsAggregator _resultsAggregator;
     private readonly ITime _time;
-    private readonly ILogger _logger;
-    private readonly ILoggerFactory _loggerFactory;
     private readonly CancellationToken _cancel;
 
     private readonly BasicLoadGeneratorMetrics _metrics;
 
     private int _requestsCreated;
 
-    private readonly BasicRequest[] _pendingRequestBuffer = new BasicRequest[1024];
+    private readonly BasicRequest[] _pendingRequestBuffer = new BasicRequest[128];
 
     public bool TryGetPendingRequests([NotNullWhen(returnValue: true)] out BasicRequest[]? requestsBuffer, out int requestCount)
     {

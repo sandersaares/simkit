@@ -7,8 +7,6 @@ namespace Tests.LoadBalancing;
 /// </summary>
 internal sealed class BasicRequest : IRequest, IRoutedRequest
 {
-    public string Id { get; }
-
     private static long _nextId;
     private static long GetNextId() => Interlocked.Increment(ref _nextId);
 
@@ -18,7 +16,6 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
         IResultsAggregator resultsAggregator,
         CancellationToken cancel)
     {
-        Id = GetNextId().ToString();
         _resultsAggregator = resultsAggregator;
 
         _resultsAggregator.OnRequestCreated();
