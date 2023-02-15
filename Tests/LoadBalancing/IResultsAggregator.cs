@@ -8,5 +8,5 @@ internal interface IResultsAggregator
     void OnRequestCreated();
     void OnRequestCompletedByClient();
     void OnRequestCompletedByTarget();
-    void OnRequestFailed();
+    void OnRequestFailed(string reason);
 }

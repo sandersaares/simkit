@@ -69,7 +69,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
         }
 
         _notifyOnCompleted(this);
-        _resultsAggregator.OnRequestFailed();
+        _resultsAggregator.OnRequestFailed(reason);
     }
 
     public void MarkAsCompletedByTarget()

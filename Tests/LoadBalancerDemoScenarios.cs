@@ -41,7 +41,7 @@ public sealed class LoadBalancerDemoScenarios
         {
             var loadGenerator = simulation.GetRequiredService<BasicLoadGenerator>();
 
-            var targets = new Dictionary<Guid, BasicRequestTarget>();
+            var targets = new Dictionary<string, BasicRequestTarget>();
             for (var i = 0; i < targetCount; i++)
             {
                 var target = simulation.GetRequiredService<BasicRequestTarget>();

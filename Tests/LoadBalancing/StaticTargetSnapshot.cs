@@ -5,10 +5,10 @@
 /// </summary>
 internal sealed class StaticTargetSnapshot : ITargetSnapshot
 {
-    public StaticTargetSnapshot(Guid id)
+    public StaticTargetSnapshot(string id)
     {
         Id = id;
     }
 
-    public Guid Id { get; }
+    public string Id { get; }
 }

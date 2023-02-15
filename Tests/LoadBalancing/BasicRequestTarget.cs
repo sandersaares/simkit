@@ -11,7 +11,7 @@
 /// </remarks>
 internal sealed class BasicRequestTarget
 {
-    public Guid Id { get; } = Guid.NewGuid();
+    public string Id { get; } = Guid.NewGuid().ToString();
 
     public BasicRequestTarget(
         BasicRequestScenarioConfiguration scenarioConfiguration)

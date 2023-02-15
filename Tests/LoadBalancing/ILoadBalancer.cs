@@ -8,5 +8,5 @@ internal interface ILoadBalancer
     /// <summary>
     /// Makes a routing decision for a specific request, returning the ID of the target that is to handle this request.
     /// </summary>
-    Guid RouteRequest(IRequest request);
+    string RouteRequest(IRequest request);
 }
