@@ -176,7 +176,13 @@ public sealed class SimulatedTime : ITime
         // If the last callback returned "false", this is set and the logic will remove the timer the next time it is evaluated.
         public bool Remove { get; set; }
 
-        private static readonly ObjectPool<RegisteredSynchronousTimer> Pool = ObjectPool.Create<RegisteredSynchronousTimer>();
+        private static readonly DefaultObjectPoolProvider PoolProvider = new()
+        {
+            // This is per-process, across all simulation runs. Could theoretically be a sizable bulk.
+            MaximumRetained = 4096
+        };
+
+        private static readonly ObjectPool<RegisteredSynchronousTimer> Pool = PoolProvider.Create<RegisteredSynchronousTimer>();
 
         public static RegisteredSynchronousTimer GetInstance() => Pool.Get();
         public void ReturnToPool()
