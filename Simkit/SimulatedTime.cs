@@ -102,6 +102,36 @@ public sealed class SimulatedTime : ITime
         }
     }
 
+    public void Delay(TimeSpan duration, Func<object, CancellationToken, ValueTask> onElapsed, object state, CancellationToken cancel)
+    {
+        // A delay with a callback is just a timer that only runs once.
+        var timer = RegisteredSynchronousTimer.GetInstance().Update(onElapsed, state, cancel);
+        timer.NextTriggerOnOrAfter = _now + duration;
+
+        lock (_synchronousTimersLock)
+        {
+            _synchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
+
+            _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
+            _metrics.SynchronousTimersTotal.Inc();
+        }
+    }
+
+    public void Delay(TimeSpan duration, Action<object> onElapsed, object state, CancellationToken cancel)
+    {
+        // A delay with a callback is just a timer that only runs once.
+        var timer = RegisteredSynchronousTimer.GetInstance().Update(onElapsed, state, cancel);
+        timer.NextTriggerOnOrAfter = _now + duration;
+
+        lock (_synchronousTimersLock)
+        {
+            _synchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
+
+            _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
+            _metrics.SynchronousTimersTotal.Inc();
+        }
+    }
+
     public void StartTimer(TimeSpan interval, Func<CancellationToken, Task<bool>> onTick, CancellationToken cancel)
     {
         var timer = new RegisteredAsynchronousTimer(interval, onTick, cancel)
@@ -146,6 +176,34 @@ public sealed class SimulatedTime : ITime
         }
     }
 
+    public void StartTimer(TimeSpan interval, Func<object, CancellationToken, ValueTask<bool>> onTick, object state, CancellationToken cancel)
+    {
+        var timer = RegisteredSynchronousTimer.GetInstance().Update(interval, onTick, state, cancel);
+        timer.NextTriggerOnOrAfter = _now + interval;
+
+        lock (_synchronousTimersLock)
+        {
+            _synchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
+
+            _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
+            _metrics.SynchronousTimersTotal.Inc();
+        }
+    }
+
+    public void StartTimer(TimeSpan interval, Func<object, bool> onTick, object state, CancellationToken cancel)
+    {
+        var timer = RegisteredSynchronousTimer.GetInstance().Update(interval, onTick, state, cancel);
+        timer.NextTriggerOnOrAfter = _now + interval;
+
+        lock (_synchronousTimersLock)
+        {
+            _synchronousTimers.Enqueue(timer, timer.NextTriggerOnOrAfter);
+
+            _metrics.SynchronousTimersCurrent.Set(_synchronousTimers.Count);
+            _metrics.SynchronousTimersTotal.Inc();
+        }
+    }
+
     // A timer that is expected to complete asynchronously (the Task will probably not be completed synchronously).
     private sealed record RegisteredAsynchronousTimer(
         TimeSpan Interval,
@@ -173,6 +231,13 @@ public sealed class SimulatedTime : ITime
         public Func<bool>? OnRawTick { get; set; }
         public Func<CancellationToken, ValueTask>? OnSingleInvocationValueTaskTick { get; set; }
         public Action? OnSingleInvocationRawTick { get; set; }
+        public Func<object, CancellationToken, ValueTask<bool>>? OnValueTaskTickWithState { get; set; }
+        public Func<object, bool>? OnRawTickWithState { get; set; }
+        public Func<object, CancellationToken, ValueTask>? OnSingleInvocationValueTaskTickWithState { get; set; }
+        public Action<object>? OnSingleInvocationRawTickWithState { get; set; }
+
+        // Provided to any tick handlers that accept a state argument.
+        public object State { get; set; } = null!;
 
         public RegisteredSynchronousTimer Update(TimeSpan interval, Func<CancellationToken, ValueTask<bool>> onTick, CancellationToken cancel)
         {
@@ -188,6 +253,26 @@ public sealed class SimulatedTime : ITime
             Update(interval, cancel);
 
             OnRawTick = onTick;
+
+            return this;
+        }
+
+        public RegisteredSynchronousTimer Update(TimeSpan interval, Func<object, CancellationToken, ValueTask<bool>> onTick, object state, CancellationToken cancel)
+        {
+            Update(interval, cancel);
+
+            OnValueTaskTickWithState = onTick;
+            State = state;
+
+            return this;
+        }
+
+        public RegisteredSynchronousTimer Update(TimeSpan interval, Func<object, bool> onTick, object state, CancellationToken cancel)
+        {
+            Update(interval, cancel);
+
+            OnRawTickWithState = onTick;
+            State = state;
 
             return this;
         }
@@ -210,6 +295,26 @@ public sealed class SimulatedTime : ITime
             Update(DelayInterval, cancel);
 
             OnSingleInvocationRawTick = onTick;
+
+            return this;
+        }
+
+        public RegisteredSynchronousTimer Update(Func<object, CancellationToken, ValueTask> onTick, object state, CancellationToken cancel)
+        {
+            Update(DelayInterval, cancel);
+
+            OnSingleInvocationValueTaskTickWithState = onTick;
+            State = state;
+
+            return this;
+        }
+
+        public RegisteredSynchronousTimer Update(Action<object> onTick, object state, CancellationToken cancel)
+        {
+            Update(DelayInterval, cancel);
+
+            OnSingleInvocationRawTickWithState = onTick;
+            State = state;
 
             return this;
         }
@@ -258,6 +363,11 @@ public sealed class SimulatedTime : ITime
             OnRawTick = null;
             OnSingleInvocationValueTaskTick = null;
             OnSingleInvocationRawTick = null;
+            OnValueTaskTickWithState = null;
+            OnRawTickWithState = null;
+            OnSingleInvocationValueTaskTickWithState = null;
+            OnSingleInvocationRawTickWithState = null;
+            State = null!;
         }
     }
 
@@ -482,6 +592,24 @@ public sealed class SimulatedTime : ITime
                     else if (timer.OnSingleInvocationRawTick != null)
                     {
                         timer.OnSingleInvocationRawTick();
+                        keepTimer = false;
+                    }
+                    else if (timer.OnValueTaskTickWithState != null)
+                    {
+                        keepTimer = await timer.OnValueTaskTickWithState(timer.State, timer.Cancel);
+                    }
+                    else if (timer.OnRawTickWithState != null)
+                    {
+                        keepTimer = timer.OnRawTickWithState(timer.State);
+                    }
+                    else if (timer.OnSingleInvocationValueTaskTickWithState != null)
+                    {
+                        await timer.OnSingleInvocationValueTaskTickWithState(timer.State, timer.Cancel);
+                        keepTimer = false;
+                    }
+                    else if (timer.OnSingleInvocationRawTickWithState != null)
+                    {
+                        timer.OnSingleInvocationRawTickWithState(timer.State);
                         keepTimer = false;
                     }
                     else

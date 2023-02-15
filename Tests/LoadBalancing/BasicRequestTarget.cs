@@ -19,6 +19,8 @@ internal sealed class BasicRequestTarget
         _scenarioConfiguration = scenarioConfiguration;
 
         _snapshot = new StaticTargetSnapshot(Id);
+
+        _onRequestCompletedDelegate = OnRequestCompleted;
     }
 
     private readonly BasicRequestScenarioConfiguration _scenarioConfiguration;
@@ -36,13 +38,15 @@ internal sealed class BasicRequestTarget
             // The request itself signals when it is completed (at which point we remove it from our active requests set).
             _activeRequests.Add(request);
 
-            request.RegisterForCompletionNotification(OnRequestCompleted);
+            request.RegisterForCompletionNotification(_onRequestCompletedDelegate);
         }
     }
 
     private readonly List<BasicRequest> _activeRequests = new();
 
     private readonly object _lock = new();
+
+    private readonly Action<BasicRequest> _onRequestCompletedDelegate;
 
     private void OnRequestCompleted(BasicRequest request)
     {

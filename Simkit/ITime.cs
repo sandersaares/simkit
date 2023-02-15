@@ -48,6 +48,30 @@ public interface ITime
     void StartTimer(TimeSpan interval, Func<bool> onTick, CancellationToken cancel);
 
     /// <summary>
+    /// Periodically calls an asynchronous callback from an unspecified thread, passing a custom object as state.
+    /// 
+    /// Will not execute multiple times if multiple intervals of time pass.
+    /// 
+    /// There are two ways to stop the timer - either signal cancellation via the token (which is passed through to callback)
+    /// or return false from the callback. Both will result in no further timer executions being performed.
+    /// 
+    /// If running in a simulation, the simulation will pause until the tick handler returns.
+    /// </summary>
+    void StartTimer(TimeSpan interval, Func<object, CancellationToken, ValueTask<bool>> onTick, object state, CancellationToken cancel);
+
+    /// <summary>
+    /// Periodically calls a synchronous callback from an unspecified thread, passing a custom object as state.
+    /// 
+    /// Will not execute multiple times if multiple intervals of time pass.
+    /// 
+    /// There are two ways to stop the timer - either signal cancellation via the token (which is passed through to callback)
+    /// or return false from the callback. Both will result in no further timer executions being performed.
+    /// 
+    /// If running in a simulation, the simulation will pause until the tick handler returns.
+    /// </summary>
+    void StartTimer(TimeSpan interval, Func<object, bool> onTick, object state, CancellationToken cancel);
+
+    /// <summary>
     /// Avoid using this as a scheduling mechanism because when running in a simulation,
     /// the simulation does not know when the code triggered by the delay finishes executing.
     /// 
@@ -76,6 +100,20 @@ public interface ITime
     /// If running in a simulation, the simulation will pause until the callback returns.
     /// </summary>
     void Delay(TimeSpan duration, Action onElapsed, CancellationToken cancel);
+
+    /// <summary>
+    /// Calls a callback (once) when a delay elapses, passing a custom object as state.
+    /// 
+    /// If running in a simulation, the simulation will pause until the callback returns.
+    /// </summary>
+    void Delay(TimeSpan duration, Func<object, CancellationToken, ValueTask> onElapsed, object state, CancellationToken cancel);
+
+    /// <summary>
+    /// Calls a callback (once) when a delay elapses, passing a custom object as state.
+    /// 
+    /// If running in a simulation, the simulation will pause until the callback returns.
+    /// </summary>
+    void Delay(TimeSpan duration, Action<object> onElapsed, object state, CancellationToken cancel);
 
     long GetHighPrecisionTimestamp();
 
