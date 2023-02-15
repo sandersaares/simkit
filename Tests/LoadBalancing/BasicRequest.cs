@@ -38,7 +38,7 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
     /// </remarks>
     public void RegisterForCompletionNotification(Action<BasicRequest> callback)
     {
-        lock (_lock)
+        lock (this)
         {
             // Sanity check, to avoid complex reentrancy logic.
             if (IsCompleted)
@@ -48,55 +48,50 @@ internal sealed class BasicRequest : IRequest, IRoutedRequest
         }
     }
 
-    private readonly object _lock = new();
-
     private Action<BasicRequest> _notifyOnCompleted = _ => { };
 
     public void MarkAsFailed(string reason)
     {
-        lock (_lock)
+        lock (this)
         {
             if (IsCompleted)
                 return; // Unexpected but whatever - it already finished, so it no longer matters.
 
             IsCompleted = true;
             FailureReason = reason;
-
-            _notifyOnCompleted(this);
-
-            _resultsAggregator.OnRequestFailed();
         }
+
+        _notifyOnCompleted(this);
+        _resultsAggregator.OnRequestFailed();
     }
 
     public void MarkAsCompletedByTarget()
     {
-        lock (_lock)
+        lock (this)
         {
             if (IsCompleted)
                 return;
 
             IsCompleted = true;
             Succeeded = true;
-
-            _notifyOnCompleted(this);
-
-            _resultsAggregator.OnRequestCompletedByTarget();
         }
+
+        _notifyOnCompleted(this);
+        _resultsAggregator.OnRequestCompletedByTarget();
     }
 
     public void MarkAsCompletedByClient()
     {
-        lock (_lock)
+        lock (this)
         {
             if (IsCompleted)
                 return;
 
             IsCompleted = true;
             Succeeded = true;
-
-            _notifyOnCompleted(this);
-
-            _resultsAggregator.OnRequestCompletedByClient();
         }
+
+        _notifyOnCompleted(this);
+        _resultsAggregator.OnRequestCompletedByClient();
     }
 }
