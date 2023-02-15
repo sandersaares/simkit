@@ -22,6 +22,4 @@ internal sealed class ArtifactPathProvider
     }
 
     internal string Root => "SimulationArtifacts";
-
-    private const string RunFormatString = "D3";
 }

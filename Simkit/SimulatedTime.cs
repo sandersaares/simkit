@@ -390,7 +390,7 @@ public sealed class SimulatedTime : ITime
 
     private DateTimeOffset _now;
 
-    // We reuse these buffers for performance. We do not use ArrayPool because it has size limits.
+    // We reuse these buffers for performance.
     private readonly Task[] _asynchronousTimerCallbackTasks = new Task[128];
     private readonly RegisteredSynchronousTimer[] _synchronousTimersToTrigger = new RegisteredSynchronousTimer[128];
 
@@ -416,7 +416,7 @@ public sealed class SimulatedTime : ITime
                     // Note that we do not ignore the SimulatedTime CT here!
                 }
 
-                // Do not leave dangling references to dead objects.
+                // Do not leave dangling references in buffer.
                 _asynchronousTimerCallbackTasks[i] = Task.CompletedTask;
             }
 
@@ -631,7 +631,7 @@ public sealed class SimulatedTime : ITime
             }
             finally
             {
-                // Do not leave dangling references to dead objects.
+                // Do not leave dangling references in buffer.
                 _synchronousTimersToTrigger[i] = null!;
             }
         }

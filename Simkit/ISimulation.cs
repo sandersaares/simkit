@@ -8,7 +8,8 @@
 /// * CancellationToken
 /// * SimulationParameters
 /// * ITime
-/// * SimulatedTime/// * IMetricFactory
+/// * SimulatedTime
+/// * IMetricFactory
 /// * ILoggerFactory
 /// * ILogger of T
 /// </remarks>
@@ -20,7 +21,7 @@ public interface ISimulation : IAsyncDisposable
     /// Executes the simulation.
     /// </summary>
     /// <remarks>
-    /// For cancellation use the cancellation token passed to the Simulator object.
+    /// For cancellation use the cancellation token passed to the root Simulator object.
     /// </remarks>
     Task ExecuteAsync();
 }
