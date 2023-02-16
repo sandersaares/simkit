@@ -13,8 +13,13 @@ namespace Tests;
 [TestClass]
 public sealed class LoadBalancerDemoScenarios
 {
-    [TestMethod]
-    public async Task BasicScenario()
+    [DataRow(100)]
+    [DataRow(200)]
+    [DataRow(300)]
+    [DataRow(400)]
+    [DataRow(500)]
+    [DataTestMethod]
+    public async Task BasicScenario(int globalRequestsPerSecond)
     {
         var parameters = new SimulationParameters();
         var simulator = new Simulator(parameters);
@@ -23,7 +28,7 @@ public sealed class LoadBalancerDemoScenarios
 
         simulator.ConfigureServices(services =>
         {
-            services.AddSingleton(new BasicRequestScenarioConfiguration(MaxRequestDuration: TimeSpan.FromSeconds(60), MaxConcurrentRequestsPerTarget: 1000, GlobalRequestsPerSecond: 1000));
+            services.AddSingleton(new BasicRequestScenarioConfiguration(MaxRequestDuration: TimeSpan.FromSeconds(60), MaxConcurrentRequestsPerTarget: 1000, GlobalRequestsPerSecond: globalRequestsPerSecond));
             services.AddSingleton<BasicLoadGenerator>();
 
             services.AddSingleton<StaticTargetRegistry>();
@@ -54,6 +59,7 @@ public sealed class LoadBalancerDemoScenarios
             var loadBalancer = simulation.GetRequiredService<RandomLoadBalancer>();
 
             var logger = simulation.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(BasicScenario));
+            logger.LogInformation("Running scenario {scenario} with {rps} requests per second.", nameof(BasicScenario), globalRequestsPerSecond);
 
             var simulatedTime = simulation.GetRequiredService<SimulatedTime>();
             var resultsAggregator = simulation.GetRequiredService<BasicResultsAggregator>();

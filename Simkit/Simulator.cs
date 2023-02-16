@@ -90,6 +90,9 @@ public sealed class Simulator
 
         public async Task ExecuteAsync()
         {
+            var logger = this.GetRequiredService<ILogger<Simulation>>();
+            logger.LogInformation("Starting simulation {id} run {run}.", _identifier.SimulationId, _identifier.RunIndex);
+
             var tickCount = _parameters.TicksPerSimulation;
 
             for (var tickIndex = 0; tickIndex < tickCount; tickIndex++)
