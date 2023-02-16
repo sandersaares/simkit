@@ -1,0 +1,383 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_SASAARESFHLFEB23",
+      "label": "sasaaresfhlfeb23",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "grafana-azure-data-explorer-datasource",
+      "pluginName": "Azure Data Explorer Datasource"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "9.3.2.2"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-azure-data-explorer-datasource",
+      "name": "Azure Data Explorer Datasource",
+      "version": "4.2.0"
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "1. Take metrics.json.gz from simulator.\r\n1. Upload to Azure Data Explorer, simkit table.\r\n1. Paste simulation ID into textbox.\r\n\r\nSimulations start on 2000-01-01 00:00:00 UTC by convention.\r\n\r\nError SEM0025 typically means \"simulation not found\".",
+        "mode": "markdown"
+      },
+      "pluginVersion": "9.3.2.2",
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "from": {
+              "property": {
+                "name": "test2",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "test2\n| where $__timeFilter(timestamp)\n| order by timestamp asc",
+          "querySource": "raw",
+          "rawMode": false,
+          "refId": "A",
+          "resultFormat": "table"
+        }
+      ],
+      "title": "Usage instructions",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "percent"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value demo_requests_completed_by_client_total"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Succeeded (ended by client)"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value demo_requests_completed_by_target_total"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Succeeded (ended by target)"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value demo_requests_failed_total"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Failed"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value requests_pending"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pending"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#c9ced3",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 0
+      },
+      "id": 9,
+      "interval": "1s",
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "from": {
+              "property": {
+                "name": "test2",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "hide": false,
+          "pluginVersion": "4.2.0",
+          "query": "let requests_completed_for_any_reason = simkit\n| where $__timeFilter(timestamp)\n| where name in ('demo_requests_completed_by_client_total', 'demo_requests_completed_by_target_total', 'demo_requests_failed_total')\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| summarize value = avg(value) by name, timestamp = bin(timestamp, $__timeInterval)\n| summarize value = sum(value) by timestamp;\n\nlet requests_pending = simkit\n| where $__timeFilter(timestamp)\n| where name == 'demo_requests_created_total'\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| summarize requests_created_total = avg(value) by name, timestamp = bin(timestamp, $__timeInterval)\n| join (requests_completed_for_any_reason\n  | project-rename requests_completed_total = value)\n  on timestamp\n| project name = 'requests_pending', value = requests_created_total - requests_completed_total, timestamp;\n\nsimkit\n| where $__timeFilter(timestamp)\n| where name in ('demo_requests_completed_by_client_total', 'demo_requests_completed_by_target_total', 'demo_requests_failed_total')\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| summarize value = avg(value) by name, timestamp = bin(timestamp, $__timeInterval)\n| union requests_pending\n| order by timestamp asc",
+          "querySource": "raw",
+          "rawMode": true,
+          "refId": "B",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Request status",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621",
+          "value": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621"
+        },
+        "hide": 0,
+        "label": "Simulation ID",
+        "name": "simulation_id",
+        "options": [
+          {
+            "selected": true,
+            "text": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621",
+            "value": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621"
+          }
+        ],
+        "query": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-azure-data-explorer-datasource",
+          "uid": "${DS_SASAARESFHLFEB23}"
+        },
+        "definition": "simkit\n| where name == 'simkit_time_delays_pending'\n| where simulation_id == '$simulation_id'\n| project run = tostring(run)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Run",
+        "multi": true,
+        "name": "run",
+        "options": [],
+        "query": "simkit\n| where name == 'simkit_time_delays_pending'\n| where simulation_id == '$simulation_id'\n| project run = tostring(run)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 3,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "2000-01-01T00:00:00.000Z",
+    "to": "2000-01-01T00:11:00.000Z"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Load balancer simulation",
+  "uid": "SmrFSo1Vk",
+  "version": 8,
+  "weekStart": ""
+}

@@ -1,0 +1,771 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_SASAARESFHLFEB23",
+      "label": "sasaaresfhlfeb23",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "grafana-azure-data-explorer-datasource",
+      "pluginName": "Azure Data Explorer Datasource"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "9.3.2.2"
+    },
+    {
+      "type": "datasource",
+      "id": "grafana-azure-data-explorer-datasource",
+      "name": "Azure Data Explorer Datasource",
+      "version": "4.2.0"
+    },
+    {
+      "type": "panel",
+      "id": "stat",
+      "name": "Stat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "text",
+      "name": "Text",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^tick_duration_seconds$/",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.3.2.2",
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "from": {
+              "property": {
+                "name": "demo1",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "simkit\n| where name == 'simkit_time_elapsed_ticks_total'\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| where value > 0\n| join (simkit\n  | where name == 'simkit_time_elapsed_seconds_total'\n  | project simulation_id, timestamp, seconds_value = value\n  ) on simulation_id, timestamp\n| where seconds_value > 0\n| project tick_duration_seconds = seconds_value / value, timestamp\n| summarize tick_duration_seconds = avg(tick_duration_seconds)",
+          "querySource": "raw",
+          "rawMode": true,
+          "refId": "A",
+          "resultFormat": "table"
+        }
+      ],
+      "title": "Tick duration",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/^ticks_per_second$/",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "9.3.2.2",
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "from": {
+              "property": {
+                "name": "demo1",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "simkit\n| where name == 'simkit_time_elapsed_ticks_total'\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| where value > 0\n| join (simkit\n  | where name == 'simkit_time_elapsed_seconds_total'\n  | project simulation_id, timestamp, seconds_value = value\n  ) on simulation_id, timestamp\n| where seconds_value > 0\n| project ticks_per_second = value / seconds_value, timestamp\n| summarize ticks_per_second = avg(ticks_per_second)",
+          "querySource": "raw",
+          "rawMode": true,
+          "refId": "A",
+          "resultFormat": "table"
+        }
+      ],
+      "title": "Ticks per second",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value simkit_time_asynchronous_timers_current"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Asynchronous timers"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value simkit_time_delays_pending"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Asynchronous delays"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "value simkit_time_synchronous_timers_current"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Synchronous timers and delays"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 6,
+        "y": 0
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "simkit\n| where $__timeFilter(timestamp)\n| where name in ('simkit_time_delays_pending', 'simkit_time_synchronous_timers_current', 'simkit_time_asynchronous_timers_current')\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| summarize value = avg(value) by bin(timestamp, $__timeInterval), name\n| order by timestamp asc",
+          "querySource": "raw",
+          "rawMode": true,
+          "refId": "A",
+          "resultFormat": "time_series"
+        }
+      ],
+      "title": "Scheduling operations in progress",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "­ simkit_time_asynchronous_timers_total"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Asynchronous timers"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "­ simkit_time_delays_total"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Asynchronous delays"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "­ simkit_time_synchronous_timers_total"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Synchronous timers and delays"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 15,
+        "y": 0
+      },
+      "id": 10,
+      "interval": "1s",
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "// Calculates the rate of change per second per bin, given a series of incrementing value + timestamp bins.\nlet series_rate=(values:dynamic, timestamps:dynamic) {\n  let values_delta = series_subtract(array_shift_left(values, 1), values);\n  let timestamps_delta_ticks = series_subtract(array_shift_left(timestamps, 1), timestamps);\n  let timestamps_delta_seconds = series_divide(timestamps_delta_ticks, repeat(10000000, array_length(timestamps)));\n  series_divide(values_delta, timestamps_delta_seconds)\n};\n\nsimkit\n| where $__timeFilter(timestamp)\n| where name in ('simkit_time_synchronous_timers_total', 'simkit_time_asynchronous_timers_total', 'simkit_time_delays_total')\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| partition by name\n(\n  sort by timestamp asc\n  | make-series values=min(value), timestamps=min(timestamp) on timestamp step $__timeInterval by name\n  | extend values_delta_per_second = series_rate(values, timestamps)\n)\n// Names that make Grafana output functional and pretty enough.\n| project Timestamp = timestamp, ['­'] = values_delta_per_second, name\n| order by name asc",
+          "querySource": "raw",
+          "rawMode": true,
+          "refId": "A",
+          "resultFormat": "time_series_adx_series"
+        }
+      ],
+      "title": "New scheduling operations (1/sec)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
+      "id": 5,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "1. Take metrics.json.gz from simulator.\r\n1. Upload to Azure Data Explorer, simkit table.\r\n1. Paste simulation ID into textbox.\r\n\r\nSimulations start on 2000-01-01 00:00:00 UTC by convention.\r\n\r\nError SEM0025 typically means \"simulation not found\".",
+        "mode": "markdown"
+      },
+      "pluginVersion": "9.3.2.2",
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "from": {
+              "property": {
+                "name": "test2",
+                "type": "string"
+              },
+              "type": "property"
+            },
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "test2\n| where $__timeFilter(timestamp)\n| order by timestamp asc",
+          "querySource": "raw",
+          "rawMode": false,
+          "refId": "A",
+          "resultFormat": "table"
+        }
+      ],
+      "title": "Usage instructions",
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-azure-data-explorer-datasource",
+        "uid": "${DS_SASAARESFHLFEB23}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 8
+      },
+      "id": 9,
+      "interval": "1s",
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "database": "feb23",
+          "datasource": {
+            "type": "grafana-azure-data-explorer-datasource",
+            "uid": "${DS_SASAARESFHLFEB23}"
+          },
+          "expression": {
+            "groupBy": {
+              "expressions": [],
+              "type": "and"
+            },
+            "reduce": {
+              "expressions": [],
+              "type": "and"
+            },
+            "where": {
+              "expressions": [],
+              "type": "and"
+            }
+          },
+          "pluginVersion": "4.2.0",
+          "query": "// Calculates the rate of change per second per bin, given a series of incrementing value + timestamp bins.\nlet series_rate=(values:dynamic, timestamps:dynamic) {\n  let values_delta = series_subtract(array_shift_left(values, 1), values);\n  let timestamps_delta_ticks = series_subtract(array_shift_left(timestamps, 1), timestamps);\n  let timestamps_delta_seconds = series_divide(timestamps_delta_ticks, repeat(10000000, array_length(timestamps)));\n  series_divide(values_delta, timestamps_delta_seconds)\n};\n\nsimkit\n| where $__timeFilter(timestamp)\n| where name == 'simkit_time_timer_callback_total'\n| where simulation_id == '$simulation_id' and $__contains(run, $run)\n| partition by run\n(\n  // NB! Interval must not be smaller than our measurement interval or you'll get some empty bins.\n  make-series values=min(value), timestamps=min(timestamp) on timestamp step $__timeInterval by run\n  | extend values_delta_per_second = series_rate(values, timestamps)\n)\n// Names that make Grafana output functional and pretty enough.\n| project Timestamp = timestamp, ['­'] = values_delta_per_second, run = strcat('Run ', run)\n| order by run asc",
+          "querySource": "raw",
+          "rawMode": true,
+          "refId": "A",
+          "resultFormat": "time_series_adx_series"
+        }
+      ],
+      "title": "Timer callbacks (1/sec)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621",
+          "value": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621"
+        },
+        "hide": 0,
+        "label": "Simulation ID",
+        "name": "simulation_id",
+        "options": [
+          {
+            "selected": true,
+            "text": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621",
+            "value": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621"
+          }
+        ],
+        "query": "1676532689-f236a050-57bc-47f5-852f-f10d9564a621",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {},
+        "definition": "simkit\n| where name == 'simkit_time_delays_pending'\n| where simulation_id == '$simulation_id'\n| project run = tostring(run)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Run",
+        "multi": true,
+        "name": "run",
+        "options": [],
+        "query": "simkit\n| where name == 'simkit_time_delays_pending'\n| where simulation_id == '$simulation_id'\n| project run = tostring(run)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 3,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "2000-01-01T00:00:00.000Z",
+    "to": "2000-01-01T00:11:00.000Z"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Simulation engine",
+  "uid": "SRLgQcJVz",
+  "version": 26,
+  "weekStart": ""
+}
