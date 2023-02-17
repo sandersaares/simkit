@@ -44,6 +44,4 @@ jobs:
           Simkit/bin/Release/*nupkg
 
     - name: Publish
-      run: |
-        nuget push -ApiKey ${{ secrets.nuget_api_key }} -Source https://api.nuget.org/v3/index.json Simkit/bin/Release/*.nupkg
-        nuget push -ApiKey ${{ secrets.nuget_api_key }} -Source https://api.nuget.org/v3/index.json Simkit/bin/Release/*.snupkg
+      run: nuget push -ApiKey ${{ secrets.nuget_api_key }} -Source https://api.nuget.org/v3/index.json Simkit/bin/Release/*.nupkg
