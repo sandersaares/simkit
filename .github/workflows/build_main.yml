@@ -30,7 +30,7 @@ jobs:
       run: dotnet test --configuration Release --no-restore --verbosity normal
     
     - name: Package
-      run: dotnet pack --configuration Release --version-suffix pre-${{ steps.vars.outputs.timestamp }}-${{ steps.vars.outputs.commit_short }}
+      run: dotnet pack Simkit --configuration Release --version-suffix pre-${{ steps.vars.outputs.timestamp }}-${{ steps.vars.outputs.commit_short }}
     - uses: actions/upload-artifact@v2
       with:
         name: nupkg
