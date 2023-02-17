@@ -12,6 +12,12 @@ jobs:
     - uses: actions/checkout@v2
       with:
         lfs: true
+    - name: Declare some variables
+      id: vars
+      shell: bash
+      run: |
+        echo "name=commit_short::$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "name=timestamp::$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
@@ -22,11 +28,9 @@ jobs:
       run: dotnet build --configuration Release --no-restore
     - name: Test
       run: dotnet test --configuration Release --no-restore --verbosity normal
-    - name: Get timestamp
-      id: timestamp
-      run: echo "::set-output name=timestamp::$(date +'%Y%m%d%H%M%S')"
+    
     - name: Package
-      run: dotnet pack --configuration Release --version-suffix pre-${{ steps.timestamp.outputs.timestamp }}
+      run: dotnet pack --configuration Release --version-suffix pre-${{ steps.vars.outputs.timestamp }}-${{ steps.vars.outputs.commit_short }}
     - uses: actions/upload-artifact@v2
       with:
         name: nupkg
