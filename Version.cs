@@ -1,1 +1,0 @@
-﻿[assembly: AssemblyFileVersion("8.0.0")]
