@@ -31,10 +31,10 @@ jobs:
     
     - name: Package
       run: dotnet pack Simkit --configuration Release --version-suffix pre-${{ steps.vars.outputs.timestamp }}-${{ steps.vars.outputs.commit_short }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: nupkg
         path: |
-          Simkit/bin/Release/*nupkg
+          **/*nupkg
     # - name: Publish
     #   run: nuget push -ApiKey ${{ secrets.nuget_api_key }} -Source https://api.nuget.org/v3/index.json *.nupkg
