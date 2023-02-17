@@ -13,16 +13,11 @@
 
 	<ItemGroup>
 	  <!--<PackageReference Include="Karambolo.Extensions.Logging.File" Version="3.3.1" />-->
+	  <PackageReference Include="Karambolo.Extensions.Logging.File" Version="3.3.1" />
 	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
 	  <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
 	  <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
 	  <PackageReference Include="prometheus-net" Version="8.0.0-pre-230210074852-a7c1277" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Reference Include="Karambolo.Extensions.Logging.File">
-	    <HintPath>..\..\..\random\filelogger\source\FileLogger\bin\Release\netstandard2.1\Karambolo.Extensions.Logging.File.dll</HintPath>
-	  </Reference>
 	</ItemGroup>
 
 </Project>
