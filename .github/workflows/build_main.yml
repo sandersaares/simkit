@@ -16,8 +16,8 @@ jobs:
       id: vars
       shell: bash
       run: |
-        echo "name=commit_short::$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-        echo "name=timestamp::$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+        echo "commit_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "timestamp=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
