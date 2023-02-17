@@ -1,4 +1,4 @@
-name: Build
+name: Publish stable
 
 on:
   workflow_dispatch:
