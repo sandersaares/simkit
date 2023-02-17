@@ -14,7 +14,7 @@ namespace Simkit;
 /// We only record data on every Nth tick (although N may be 1) because typically for whole-simulation analysis the useful granularity is something realistic.
 /// For production scenarios, the typical recording interval is 10-60 seconds, although for debugging simulations 1 second can also make a lot of sense.
 /// 
-/// The data set generated can be large but ultimatley will be analyzed in Azure Data Explorer, so this is merely a storage & upload convenience concern.
+/// The data set generated can be large but ultimatley will be analyzed in Azure Data Explorer, so this is merely a storage and upload convenience concern.
 /// We serialize the data (via MetricHistorySerializer) in real time, without building up big buffers, to avoid consuming excessive amounts of memory.
 /// </remarks>
 internal sealed class MetricHistory
