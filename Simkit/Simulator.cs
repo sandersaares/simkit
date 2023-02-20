@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using Karambolo.Extensions.Logging.File;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,6 +22,9 @@ public sealed class Simulator
         Parameters = parameters;
 
         SimulationId = $"{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}-{Guid.NewGuid()}";
+
+        // This makes it visible in unit test output, so you can easily look up the right set of artifacts on disk.
+        Trace.WriteLine("Starting simulation " + SimulationId);
     }
 
     /// <summary>
